@@ -99,7 +99,19 @@ function renderBenefCharts() {
   var gMap = { 'L':'Laki-laki', 'P':'Perempuan', '—':'Tidak Diisi' };
   var byGender = groupCount(d, function(r) { return gMap[r[B.gender]] || 'Tidak Diisi'; });
   var gKeys = Object.keys(byGender);
-  mkDonut('bch-gender', gKeys, gKeys.map(function(k) { return byGender[k]; }), ['#4F8EF7','#EF4444','#8A96B8']);
+  var gColors = { 'Laki-laki':'#4F8EF7', 'Perempuan':'#EF4444', 'Tidak Diisi':'#8A96B8' };
+  var gColArr = gKeys.map(function(k) { return gColors[k] || '#8A96B8'; });
+  mkDonut('bch-gender', gKeys, gKeys.map(function(k) { return byGender[k]; }), gColArr);
+  /* Gender legend */
+  var gTotal = gKeys.reduce(function(s,k){return s+byGender[k];},0)||1;
+  var gLegEl = document.getElementById('bch-gender-legend');
+  if (gLegEl) gLegEl.innerHTML = gKeys.map(function(k,i) {
+    return '<div class="dl-item">' +
+      '<div class="dl-dot" style="background:'+gColArr[i]+'"></div>' +
+      '<div class="dl-name">'+k+'</div>' +
+      '<div class="dl-pct">'+(byGender[k]/gTotal*100).toFixed(1)+'% ('+byGender[k].toLocaleString()+')</div>' +
+    '</div>';
+  }).join('');
 
   var byKat = topN(groupCount(d, function(r) { return r[B.kategori]; }), 10);
   mkBarH('bch-kategori', byKat.map(function(x){return x[0];}), byKat.map(function(x){return x[1];}),
