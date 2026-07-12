@@ -3,8 +3,8 @@
 ═══════════════════════════════════════════════ */
 
 var GAS_URL       = 'https://script.google.com/macros/s/AKfycbz7fjIFALDAbVo2TGEUi0j-RwLqZk7KxcUyU2rdNAiTHcEsAMD2i0O0g4-biV41Nw-hew/exec';
-var CACHE_KEY     = 'yai_raw_v6';
-var CACHE_KEY_TTL = 'yai_raw_ttl_v6';
+var CACHE_KEY     = 'yai_raw_v7';
+var CACHE_KEY_TTL = 'yai_raw_ttl_v7';
 var CACHE_TTL_MS  = 10 * 60 * 1000;
 
 window.P = { tgl:0, staf:1, proyek:2, kode:3, kegiatan:4, item:5, jumlah:6, file:7 };
@@ -71,14 +71,27 @@ function normProgram(val) {
   }).join(' - ');
 }
 
-/* ─── normStaf: Title Case nama staf ─── */
+/* ─── ALIAS STAF: nama berbeda tapi orang sama ─── */
+var STAF_ALIAS_API = {
+  'gens': 'Gen',
+  'gen':  'Gen',
+  'johan': 'Johan',
+  'len':  'Len',
+  'stef': 'Stef',
+};
+
+/* ─── normStaf: Title Case + alias resolution ─── */
 function normStaf(val) {
   var s = sanitizeStr(val);
   if (!s) return '';
-  return s.replace(/\s+/g, ' ')
+  // Title Case dulu
+  var titled = s.replace(/\s+/g, ' ').trim()
     .replace(/\S+/g, function(w) {
       return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
     });
+  // Cek alias berdasarkan lowercase
+  var key = titled.trim().toLowerCase();
+  return STAF_ALIAS_API[key] || titled;
 }
 
 /* ─── fetch ─── */
