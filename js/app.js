@@ -73,49 +73,116 @@ function buildAll() {
   if (al) al.style.display = 'flex';
 }
 
-/* ── normKey: key untuk deduplikasi (lowercase, spasi di sekitar - dihapus) ──
-   "Ayo - JPM" → "ayo-jpm"
-   "AYO-JPM"   → "ayo-jpm"
-   "Ayo  -  JPM" → "ayo-jpm"
+/* ── ALIAS MAP: program berbeda nama tapi sama secara organisasi ──
+   key   = normKey dari nama APAPUN dalam grup
+   value = normKey canonical (yang akan ditampilkan di dropdown)
+── */
+var PROGRAM_ALIAS = {
+  // Ayo - JPM group
+  'ayo-bersahaja':  'ayo-jpm',
+  'ayo-odgj':       'ayo-jpm',
+  'ayo-svd(odgj)':  'ayo-jpm',
+
+  // Ayo - VCA group
+  'vca':            'ayo-vca',
+
+  // Ayo - NLR (KUBIK) group
+  'nlr-kubik':      'ayo-nlr(kubik)',
+
+  // Ayo - NLR group
+  'nlr':            'ayo-nlr',
+  // 'ayo-nlr(ben)' → grup tersendiri, tidak di-alias
+};
+
+/* ── normKey: key untuk deduplikasi program
+   "Ayo - JPM", "AYO-JPM", "AYO - JPM" → semua jadi "ayo-jpm"
+   "Ayo - NLR (KUBIK)", "Ayo - NLR(KUBIK)" → "ayo-nlr(kubik)"
 ── */
 function normKey(s) {
   if (!s) return '';
-  return String(s).trim()
-    .replace(/\s*-\s*/g, '-')   // "Ayo - JPM" → "Ayo-JPM"
-    .replace(/\s+/g, ' ')        // collapse spaces
-    .toLowerCase();
+  var k = String(s).trim()
+    .toLowerCase()
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s*\(\s*/g, '(')
+    .replace(/\s*\)\s*/g, ')')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Cek alias — kalau ada, kembalikan canonical key
+  return PROGRAM_ALIAS[k] || k;
 }
 
-/* ── normStafKey: untuk staf — hanya lowercase + trim ── */
+/* ── ALIAS MAP STAF: nama berbeda tapi orang sama ── */
+var STAF_ALIAS = {
+  'gens': 'gen',   // Gens = Gen
+};
+
+/* ── normStafKey: lowercase + trim + alias ── */
 function normStafKey(s) {
   if (!s) return '';
-  return String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+  var k = String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+  return STAF_ALIAS[k] || k;
 }
 
-/* ── dedup: deduplikasi array string berdasarkan normKey, pilih versi terbaik ──
-   "terbaik" = yang paling banyak muncul, atau kalau sama, yang Title Case
+/* ── bestStafName: pilih nama tampilan terbaik (Title Case) ── */
+function bestStafName(name) {
+  if (!name) return '';
+  var s = String(name).trim();
+  // Jika semua huruf sama (semua caps atau semua lower), Title Case
+  if (s === s.toUpperCase() || s === s.toLowerCase()) {
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  }
+  return s; // sudah mixed case, pakai apa adanya
+}
+
+/* ── dedupProgram: deduplikasi program
+   - normKey sudah include PROGRAM_ALIAS, jadi alias otomatis digabung ke canonical
+   - yang tampil di dropdown = canonical key, dicari nama terbaik dari data
 ── */
+function dedupProgram(arr) {
+  // map: canonicalKey → nama terbaik untuk ditampilkan
+  var map = {};
+
+  arr.forEach(function(val) {
+    if (!val || !String(val).trim()) return;
+    var canonicalKey = normKey(val); // sudah include alias resolution
+    if (!canonicalKey) return;
+
+    if (!map[canonicalKey]) {
+      map[canonicalKey] = val;
+    } else {
+      // Prefer format "Ayo - XXX" (ada spasi di sekitar -)
+      var cur = map[canonicalKey];
+      var valHasSpace  = /\w\s+-\s+\w/.test(val);
+      var curHasSpace  = /\w\s+-\s+\w/.test(cur);
+      var valTitleCase = val === val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+      var curTitleCase = cur === cur.charAt(0).toUpperCase() + cur.slice(1).toLowerCase();
+      if (!curHasSpace && valHasSpace) map[canonicalKey] = val;
+      else if (curHasSpace && valHasSpace && !curTitleCase && valTitleCase) map[canonicalKey] = val;
+    }
+  });
+
+  return Object.values(map)
+    .filter(Boolean)
+    .sort(function(a,b) { return a.localeCompare(b); });
+}
+
+/* ── dedupByNormKey: generik untuk staf dll ── */
 function dedupByNormKey(arr, keyFn) {
-  var map = {};   // normKey → {best, count}
+  var map = {};
   arr.forEach(function(val) {
     if (!val || !String(val).trim()) return;
     var k = keyFn(val);
     if (!k) return;
     if (!map[k]) {
-      map[k] = { best: val, count: 1 };
+      map[k] = val;
     } else {
-      map[k].count++;
-      // Prefer Title Case version (first char uppercase, rest mixed)
-      var cur = map[k].best;
-      var isCurTitle  = cur  === cur.charAt(0).toUpperCase() + cur.slice(1);
-      var isValTitle  = val  === val.charAt(0).toUpperCase() + val.slice(1);
-      if (!isCurTitle && isValTitle) map[k].best = val;
+      var cur = map[k];
+      var isCurTitle = cur === cur.charAt(0).toUpperCase() + cur.slice(1).toLowerCase();
+      var isValTitle = val === val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+      if (!isCurTitle && isValTitle) map[k] = val;
     }
   });
-  return Object.values(map)
-    .map(function(x) { return x.best; })
-    .filter(Boolean)
-    .sort(function(a,b) { return a.localeCompare(b); });
+  return Object.values(map).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
 }
 
 /* Dashboard filter helpers */
@@ -128,13 +195,34 @@ function populateDashFilters() {
   //    deduplikasi berdasarkan normKey agar "Ayo - JPM" = "AYO-JPM"
   var rawProg = pjum.map(function(r){return r[P.proyek];})
     .concat(benef.map(function(r){return r[B.proyek];}));
-  var allProg = dedupByNormKey(rawProg, normKey);
+  var allProg = dedupProgram(rawProg);
   populateSel('dash-proyek', allProg);
 
   // 2. Staf: kolom staf (PJUM) + kolom nama staf (Benef)
   var rawStaf = pjum.map(function(r){return r[P.staf];})
     .concat(benef.map(function(r){return r[B.staf];}));
-  var allStaf = dedupByNormKey(rawStaf, normStafKey);
+  // Deduplikasi staf — normStafKey sudah include STAF_ALIAS
+  // sehingga 'Gens'/'gens' → key 'gen' → ditampilkan sebagai 'Gen'
+  var stafMap = {};
+  rawStaf.forEach(function(val) {
+    if (!val || !String(val).trim()) return;
+    var k = normStafKey(val); // sudah include alias resolution
+    if (!k) return;
+    // Nama tampilan: ambil dari STAF_ALIAS jika ada, else Title Case
+    var display = (function() {
+      var lower = String(val).trim().toLowerCase();
+      // Cek apakah ada di alias — jika ya, pakai nilai canonical dari STAF_ALIAS
+      if (STAF_ALIAS[lower]) return STAF_ALIAS[lower];
+      // Tidak ada alias — Title Case
+      return String(val).trim().charAt(0).toUpperCase() + String(val).trim().slice(1).toLowerCase();
+    })();
+    if (!stafMap[k]) {
+      stafMap[k] = display;
+    } else {
+      // Sudah ada — tidak perlu update karena alias sudah canonical
+    }
+  });
+  var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
   populateSel('dash-staf', allStaf);
 
   // 3. Tahun: dari tgl PJUM + tanggal kegiatan Benef, ambil tahun saja
