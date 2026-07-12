@@ -26,7 +26,7 @@
 
     <div class="app">
 
-        <!-- ====== SIDEBAR / NAVBAR ====== -->
+        <!-- ====== NAVBAR ====== -->
         <nav class="navbar">
             <div class="brand">
                 <i class="fas fa-chart-pie"></i>
@@ -144,23 +144,109 @@
 
             </section>
 
-            <!-- ====== HALAMAN LAIN (Placeholder) ====== -->
+            <!-- ====== HALAMAN BENEFICIARY ====== -->
             <section id="page-beneficiary" class="page">
-                <h2><i class="fas fa-users"></i> Data Beneficiary</h2>
-                <div class="placeholder-content">
-                    <p><i class="fas fa-spinner fa-spin"></i> Memuat data...</p>
-                    <div id="benefTableContainer"></div>
+                <h2><i class="fas fa-users"></i> Dashboard Beneficiary</h2>
+
+                <!-- Ringkasan -->
+                <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="metric-card">
+                        <div class="label">Total Beneficiary</div>
+                        <div class="value" id="benefPageTotal">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Unique Beneficiary</div>
+                        <div class="value" id="benefPageUnique">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Desa</div>
+                        <div class="value" id="benefPageDesa">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Program</div>
+                        <div class="value" id="benefPageProgram">0</div>
+                    </div>
+                </div>
+
+                <!-- Grafik Beneficiary -->
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-chart-line"></i> Trend Beneficiary per Bulan</h3>
+                        <div class="chart-wrapper"><canvas id="benefTrendChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-chart-pie"></i> Distribusi Jenis Beneficiary</h3>
+                        <div class="chart-wrapper"><canvas id="benefDistribusiChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-map-marked-alt"></i> Beneficiary per Desa (Top 10)</h3>
+                        <div class="chart-wrapper"><canvas id="benefDesaChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-trophy"></i> Top 5 Kegiatan Beneficiary</h3>
+                        <ul class="top5-list" id="benefTop5List">
+                            <li>Memuat data...</li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
+            <!-- ====== HALAMAN PJUM ====== -->
             <section id="page-pjum" class="page">
-                <h2><i class="fas fa-file-invoice"></i> Data PJUM</h2>
-                <div class="placeholder-content">
-                    <p><i class="fas fa-spinner fa-spin"></i> Memuat data...</p>
-                    <div id="pjumTableContainer"></div>
+                <h2><i class="fas fa-file-invoice"></i> Dashboard PJUM</h2>
+
+                <!-- Ringkasan -->
+                <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="metric-card">
+                        <div class="label">Total Pengeluaran</div>
+                        <div class="value" id="pjumPageTotal">Rp0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total File</div>
+                        <div class="value" id="pjumPageFile">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Proyek</div>
+                        <div class="value" id="pjumPageProyek">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Staf</div>
+                        <div class="value" id="pjumPageStaf">0</div>
+                    </div>
+                </div>
+
+                <!-- Grafik PJUM -->
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-money-bill-wave"></i> Pengeluaran PJUM per Bulan</h3>
+                        <div class="chart-wrapper"><canvas id="pjumPengeluaranChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-chart-pie"></i> Distribusi Biaya per Komponen</h3>
+                        <div class="chart-wrapper"><canvas id="pjumKomponenChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-building"></i> Top 5 Proyek dengan Biaya Tertinggi</h3>
+                        <ul class="top5-list" id="pjumTopProyekList">
+                            <li>Memuat data...</li>
+                        </ul>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-user-tie"></i> Top 5 Staf dengan Biaya Tertinggi</h3>
+                        <ul class="top5-list" id="pjumTopStafList">
+                            <li>Memuat data...</li>
+                        </ul>
+                    </div>
                 </div>
             </section>
 
+            <!-- ====== HALAMAN WILAYAH ====== -->
             <section id="page-wilayah" class="page">
                 <h2><i class="fas fa-map-marker-alt"></i> Data Wilayah</h2>
                 <div class="placeholder-content">
@@ -169,6 +255,7 @@
                 </div>
             </section>
 
+            <!-- ====== HALAMAN ANALITIK ====== -->
             <section id="page-analitik" class="page">
                 <h2><i class="fas fa-chart-line"></i> Analitik Lanjutan</h2>
                 <div class="placeholder-content">
@@ -176,6 +263,7 @@
                 </div>
             </section>
 
+            <!-- ====== HALAMAN DATA ====== -->
             <section id="page-data" class="page">
                 <h2><i class="fas fa-database"></i> Data Mentah</h2>
                 <div class="placeholder-content">
@@ -183,6 +271,7 @@
                 </div>
             </section>
 
+            <!-- ====== HALAMAN LAPORAN ====== -->
             <section id="page-laporan" class="page">
                 <h2><i class="fas fa-file-alt"></i> Laporan</h2>
                 <div class="placeholder-content">
@@ -190,6 +279,7 @@
                 </div>
             </section>
 
+            <!-- ====== HALAMAN PENGATURAN ====== -->
             <section id="page-pengaturan" class="page">
                 <h2><i class="fas fa-cog"></i> Pengaturan</h2>
                 <div class="placeholder-content">
@@ -221,7 +311,7 @@
     <script src="js/charts.js"></script>
     <script src="js/filters.js"></script>
     <script src="js/insights.js"></script>
-    <script src="js/tables.js"></script>
+    <script src="js/pages.js"></script>
     <script src="js/main.js"></script>
 
 </body>
