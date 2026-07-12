@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * main.js — Entry Point Dashboard
+ * main.js — Entry Point Dashboard (VERSI FIX TOTAL)
  * Yayasan Ayo Indonesia
  * ============================================================
  */
@@ -11,13 +11,12 @@
 
     // State global
     const state = {
-        data: null,          // Data asli dari API
-        filteredData: null,  // Data setelah difilter
+        data: null,
+        filteredData: null,
         loading: false,
         error: null,
     };
 
-    // Simpan referensi ke window untuk akses antar module
     window._dashboardData = {
         currentData: null,
         updateDashboard: updateDashboard,
@@ -29,15 +28,12 @@
     async function init() {
         console.log('[Dashboard] Initializing...');
 
-        // Setup event listeners
         setupNavigation();
         setupModal();
         setupDetailButton();
 
-        // Load data
         await loadData();
 
-        // Setup filter setelah data loaded
         if (state.data) {
             Filters.initFilters(state.data);
         }
@@ -55,25 +51,30 @@
         showLoading(true);
 
         try {
-            // Ambil data dari API
             const data = await API.getAdminData();
+
+            console.log('[Dashboard] Data received:', data);
+            console.log('[Dashboard] Benef byBulan:', data.benef?.byBulan);
+            console.log('[Dashboard] Pjum byBulan:', data.pjum?.byBulan);
+
+            // Cek Chart.js
+            if (typeof Chart === 'undefined') {
+                console.error('[Dashboard] Chart.js tidak terload!');
+                showError('Chart.js tidak terload. Periksa koneksi internet.');
+                return;
+            }
 
             if (data && !data.error) {
                 state.data = data;
                 state.filteredData = data;
 
-                // Render dashboard
                 updateDashboard(data);
 
-                // Render tabel di halaman lain
                 Tables.renderBenefTable(data);
                 Tables.renderPjumTable(data);
                 Tables.renderWilayah(data);
 
-                // Generate insight
                 Insights.generateInsight(data);
-
-                // Update Top 5
                 Filters.updateTop5(data);
 
             } else {
@@ -92,7 +93,6 @@
 
     /**
      * Update dashboard dengan data baru
-     * @param {object} data - Data untuk dirender
      */
     function updateDashboard(data) {
         if (!data) return;
@@ -100,22 +100,18 @@
         window._dashboardData.currentData = data;
         state.filteredData = data;
 
-        // Render metrics
         if (typeof Metrics !== 'undefined') {
             Metrics.renderMetrics(data);
         }
 
-        // Render charts
         if (typeof Charts !== 'undefined') {
             Charts.renderAllCharts(data);
         }
 
-        // Update insight
         if (typeof Insights !== 'undefined') {
             Insights.generateInsight(data);
         }
 
-        // Update Top 5
         if (typeof Filters !== 'undefined') {
             Filters.updateTop5(data);
         }
@@ -141,18 +137,15 @@
             link.addEventListener('click', function() {
                 const page = this.dataset.page;
 
-                // Update active class
                 navLinks.forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
 
-                // Show/hide pages
                 Object.keys(pages).forEach(key => {
                     if (pages[key]) {
                         pages[key].classList.toggle('active', key === page);
                     }
                 });
 
-                // Refresh tabel jika ke halaman beneficiary atau pjum
                 if (page === 'beneficiary' && state.filteredData) {
                     Tables.renderBenefTable(state.filteredData);
                 }
@@ -173,23 +166,12 @@
         const modal = document.getElementById('detailModal');
         const closeBtn = document.getElementById('modalClose');
 
-        // Tutup modal
-        closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-        });
-
-        // Tutup jika klik di luar modal
+        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.remove('show');
-            }
+            if (e.target === modal) modal.classList.remove('show');
         });
-
-        // Tutup dengan ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                modal.classList.remove('show');
-            }
+            if (e.key === 'Escape') modal.classList.remove('show');
         });
     }
 
@@ -198,11 +180,9 @@
      */
     function setupDetailButton() {
         const btn = document.getElementById('btnDetailAnalitik');
-        if (!btn) return;
-
-        btn.addEventListener('click', function() {
-            showDetailModal();
-        });
+        if (btn) {
+            btn.addEventListener('click', showDetailModal);
+        }
     }
 
     /**
@@ -230,12 +210,10 @@
         const desaCount = Object.keys(benef.byDesa || {}).length;
         const programCount = Object.keys(benef.byProyek || {}).length;
 
-        // Cari top 5 desa
         const topDesa = Object.entries(benef.byDesa || {})
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5);
 
-        // Cari top 5 kegiatan
         const topKegiatan = Object.entries(benef.byKegiatan || {})
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5);
@@ -261,7 +239,6 @@
             </div>
         `;
 
-        // Top 5 Desa
         if (topDesa.length > 0) {
             html += `
                 <h4 style="margin:16px 0 8px;color:var(--gray-700);">Top 5 Desa</h4>
@@ -276,7 +253,6 @@
             `;
         }
 
-        // Top 5 Kegiatan
         if (topKegiatan.length > 0) {
             html += `
                 <h4 style="margin:16px 0 8px;color:var(--gray-700);">Top 5 Kegiatan</h4>
@@ -291,7 +267,6 @@
             `;
         }
 
-        // Total keseluruhan
         html += `
             <div style="margin-top:16px;padding:12px 16px;background:var(--accent-light);border-radius:10px;font-size:13px;color:var(--gray-700);">
                 <strong>Ringkasan:</strong> 
@@ -305,11 +280,7 @@
         modal.classList.add('show');
     }
 
-    /**
-     * Show loading indicator
-     */
     function showLoading(isLoading) {
-        // Bisa ditambahkan spinner jika diperlukan
         if (isLoading) {
             document.querySelectorAll('.value').forEach(el => {
                 if (!el.textContent || el.textContent === '0') {
@@ -319,12 +290,8 @@
         }
     }
 
-    /**
-     * Show error message
-     */
     function showError(message) {
         console.error('[Dashboard] Error:', message);
-        // Tampilkan error di insight card
         const insight = document.getElementById('insightText');
         if (insight) {
             insight.innerHTML = `
@@ -340,7 +307,6 @@
     }
 
     // ====== START ======
-    // Jalankan ketika DOM siap
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
