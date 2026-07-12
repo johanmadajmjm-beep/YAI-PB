@@ -16,18 +16,23 @@ const Filters = (function() {
     };
 
     // ============================================================
-    // UTILITY: Ekstrak Bulan & Tahun dari Tanggal
+    // UTILITY: Ekstrak Bulan & Tahun dari Tanggal (HANYA 2020-2026)
     // ============================================================
+
+    const VALID_YEARS = ['2020','2021','2022','2023','2024','2025','2026'];
 
     function extractMonth(dateStr) {
         if (!dateStr || dateStr === '—' || dateStr === '') return null;
         
         let parsed = parseDate(dateStr);
         if (parsed) {
+            const year = parsed.getFullYear().toString();
+            if (!VALID_YEARS.includes(year)) return null;
             const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             return monthNames[parsed.getMonth()];
         }
         
+        // Fallback regex
         const patterns = [
             /^(\d{4})-(\d{2})-(\d{2})/,
             /^(\d{2})\/(\d{2})\/(\d{4})/,
@@ -38,18 +43,20 @@ const Filters = (function() {
         for (let p of patterns) {
             const match = dateStr.match(p);
             if (match) {
+                let year, month;
                 if (match[1].length === 4) {
-                    const month = parseInt(match[2]);
-                    if (month >= 1 && month <= 12) {
-                        const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-                        return monthNames[month - 1];
-                    }
+                    year = match[1];
+                    month = parseInt(match[2]);
                 } else if (match[3] && match[3].length === 4) {
-                    const month = parseInt(match[2]);
-                    if (month >= 1 && month <= 12) {
-                        const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-                        return monthNames[month - 1];
-                    }
+                    year = match[3];
+                    month = parseInt(match[2]);
+                } else {
+                    continue;
+                }
+                if (!VALID_YEARS.includes(year)) return null;
+                if (month >= 1 && month <= 12) {
+                    const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                    return monthNames[month - 1];
                 }
             }
         }
@@ -62,15 +69,15 @@ const Filters = (function() {
         
         let parsed = parseDate(dateStr);
         if (parsed) {
-            return parsed.getFullYear().toString();
+            const year = parsed.getFullYear().toString();
+            if (VALID_YEARS.includes(year)) return year;
+            return null;
         }
         
         const match = dateStr.match(/\b(19|20)\d{2}\b/);
         if (match) {
-            const year = parseInt(match[0]);
-            if (year >= 1900 && year <= 2099) {
-                return year.toString();
-            }
+            const year = match[0];
+            if (VALID_YEARS.includes(year)) return year;
         }
         
         return null;
@@ -81,8 +88,8 @@ const Filters = (function() {
         
         const d = new Date(dateStr);
         if (!isNaN(d.getTime())) {
-            const year = d.getFullYear();
-            if (year >= 1900 && year <= 2099) {
+            const year = d.getFullYear().toString();
+            if (VALID_YEARS.includes(year)) {
                 return d;
             }
         }
@@ -109,7 +116,7 @@ const Filters = (function() {
                 } else {
                     continue;
                 }
-                if (year >= 1900 && year <= 2099 && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+                if (VALID_YEARS.includes(year.toString()) && month >= 0 && month <= 11 && day >= 1 && day <= 31) {
                     return new Date(year, month, day);
                 }
             }
@@ -140,20 +147,31 @@ const Filters = (function() {
     }
 
     // ============================================================
-    // DASHBOARD FILTERS
+    // DASHBOARD FILTERS (Gabungan BENEF + PJUM)
     // ============================================================
 
     function initDashboardFilters(benef, pjum) {
+        // === PROGRAM: dari benef.byProyek (Program Pendukung) + pjum.byProyek (Proyek) ===
         const programSet = new Set();
-        Object.keys(benef.byProyek || {}).forEach(p => programSet.add(p));
-        Object.keys(pjum.byProyek || {}).forEach(p => programSet.add(p));
+        Object.keys(benef.byProyek || {}).forEach(p => {
+            if (p && p !== '—' && p !== '') programSet.add(p);
+        });
+        Object.keys(pjum.byProyek || {}).forEach(p => {
+            if (p && p !== '—' && p !== '') programSet.add(p);
+        });
         populateSelect('filterProgram', programSet, 'Semua Program');
 
+        // === STAF: dari benef.byStaf + pjum.byStaf ===
         const stafSet = new Set();
-        Object.keys(benef.byStaf || {}).forEach(s => stafSet.add(s));
-        Object.keys(pjum.byStaf || {}).forEach(s => stafSet.add(s));
+        Object.keys(benef.byStaf || {}).forEach(s => {
+            if (s && s !== '—' && s !== '') stafSet.add(s);
+        });
+        Object.keys(pjum.byStaf || {}).forEach(s => {
+            if (s && s !== '—' && s !== '') stafSet.add(s);
+        });
         populateSelect('filterStaf', stafSet, 'Semua Staf');
 
+        // === BULAN: dari semua tanggal (hanya 2020-2026) ===
         const bulanSet = new Set();
         const benefRows = benef.daftar || [];
         const pjumRows = pjum.daftar || [];
@@ -165,11 +183,12 @@ const Filters = (function() {
             const m = extractMonth(r.tanggal);
             if (m) bulanSet.add(m);
         });
-        const hasBlankBenef = benefRows.some(r => !isValidDate(r.tanggal));
-        const hasBlankPjum = pjumRows.some(r => !isValidDate(r.tanggal));
+        const hasBlankBenef = benefRows.some(r => r.tanggal && !isValidDate(r.tanggal));
+        const hasBlankPjum = pjumRows.some(r => r.tanggal && !isValidDate(r.tanggal));
         if (hasBlankBenef || hasBlankPjum) bulanSet.add('Blank');
         populateSelect('filterBulan', bulanSet, 'Semua Bulan');
 
+        // === TAHUN: dari semua tanggal (hanya 2020-2026) ===
         const tahunSet = new Set();
         benefRows.forEach(r => {
             const y = extractYear(r.tanggal);
@@ -185,59 +204,81 @@ const Filters = (function() {
 
     // ============================================================
     // BENEFICIARY FILTERS
+    // Sumber: Program Pendukung, Nama Staf, Tanggal Kegiatan
     // ============================================================
 
     function initBenefFilters(benef) {
-        const programSet = new Set(Object.keys(benef.byProyek || {}));
+        // === PROGRAM: dari benef.byProyek (Program Pendukung) ===
+        const programSet = new Set();
+        Object.keys(benef.byProyek || {}).forEach(p => {
+            if (p && p !== '—' && p !== '') programSet.add(p);
+        });
         populateSelect('benefFilterProgram', programSet, 'Semua Program');
 
-        const stafSet = new Set(Object.keys(benef.byStaf || {}));
+        // === STAF: dari benef.byStaf (Nama Staf) ===
+        const stafSet = new Set();
+        Object.keys(benef.byStaf || {}).forEach(s => {
+            if (s && s !== '—' && s !== '') stafSet.add(s);
+        });
         populateSelect('benefFilterStaf', stafSet, 'Semua Staf');
 
+        // === BULAN: dari benef.daftar (Tanggal Kegiatan) ===
         const bulanSet = new Set();
         const rows = benef.daftar || [];
         rows.forEach(r => {
             const m = extractMonth(r.tanggal);
             if (m) bulanSet.add(m);
         });
-        if (rows.some(r => !isValidDate(r.tanggal))) bulanSet.add('Blank');
+        if (rows.some(r => r.tanggal && !isValidDate(r.tanggal))) bulanSet.add('Blank');
         populateSelect('benefFilterBulan', bulanSet, 'Semua Bulan');
 
+        // === TAHUN: dari benef.daftar (Tanggal Kegiatan) ===
         const tahunSet = new Set();
         rows.forEach(r => {
             const y = extractYear(r.tanggal);
             if (y) tahunSet.add(y);
         });
-        if (rows.some(r => !isValidDate(r.tanggal))) tahunSet.add('Blank');
+        if (rows.some(r => r.tanggal && !isValidDate(r.tanggal))) tahunSet.add('Blank');
         populateSelect('benefFilterTahun', tahunSet, 'Semua Tahun');
     }
 
     // ============================================================
     // PJUM FILTERS
+    // Sumber: Proyek, Staf, Tgl
     // ============================================================
 
     function initPjumFilters(pjum) {
-        const programSet = new Set(Object.keys(pjum.byProyek || {}));
+        // === PROGRAM: dari pjum.byProyek (Proyek) ===
+        const programSet = new Set();
+        Object.keys(pjum.byProyek || {}).forEach(p => {
+            if (p && p !== '—' && p !== '') programSet.add(p);
+        });
         populateSelect('pjumFilterProgram', programSet, 'Semua Program');
 
-        const stafSet = new Set(Object.keys(pjum.byStaf || {}));
+        // === STAF: dari pjum.byStaf (Staf) ===
+        const stafSet = new Set();
+        Object.keys(pjum.byStaf || {}).forEach(s => {
+            if (s && s !== '—' && s !== '') stafSet.add(s);
+        });
         populateSelect('pjumFilterStaf', stafSet, 'Semua Staf');
 
+        // === BULAN: dari pjum.daftar (Tgl) ===
         const bulanSet = new Set();
         const rows = pjum.daftar || [];
         rows.forEach(r => {
             const m = extractMonth(r.tanggal);
             if (m) bulanSet.add(m);
         });
-        if (rows.some(r => !isValidDate(r.tanggal))) bulanSet.add('Blank');
+        if (rows.some(r => r.tanggal && !isValidDate(r.tanggal))) bulanSet.add('Blank');
         populateSelect('pjumFilterBulan', bulanSet, 'Semua Bulan');
 
+        // === TAHUN: dari pjum.daftar (Tgl) ===
         const tahunSet = new Set();
         rows.forEach(r => {
             const y = extractYear(r.tanggal);
             if (y) tahunSet.add(y);
         });
-        if (rows.some(r => !isValidDate(r.tanggal))) tahunSet.add('Blank');
+        if (rows.some(r => r.tanggal && !isValidDate(r.tanggal))) tahunSet.add('Blank');
         populateSelect('pjumFilterTahun', tahunSet, 'Semua Tahun');
     }
 
@@ -249,7 +290,10 @@ const Filters = (function() {
         const select = document.getElementById(selectId);
         if (!select) return;
 
-        const values = Array.from(valueSet).filter(v => v && v !== '—' && v !== '' && v !== 'null');
+        // Filter nilai kosong
+        const values = Array.from(valueSet).filter(v => v && v !== '—' && v !== '' && v !== 'null' && v !== 'undefined');
+        
+        // Urutkan: Blank di akhir, sisanya alfabetis
         const sorted = values.sort((a, b) => {
             if (a === 'Blank') return 1;
             if (b === 'Blank') return -1;
@@ -372,6 +416,7 @@ const Filters = (function() {
         const { program, staf, bulan, tahun } = filters;
 
         return rows.filter(r => {
+            // Program (Program Pendukung)
             if (program !== 'all' && program !== 'Blank') {
                 if ((r.proyek || '') !== program) return false;
             }
@@ -379,6 +424,7 @@ const Filters = (function() {
                 if (r.proyek && r.proyek !== '' && r.proyek !== '—') return false;
             }
 
+            // Staf (Nama Staf)
             if (staf !== 'all' && staf !== 'Blank') {
                 if ((r.staf || '') !== staf) return false;
             }
@@ -386,6 +432,7 @@ const Filters = (function() {
                 if (r.staf && r.staf !== '' && r.staf !== '—') return false;
             }
 
+            // Bulan & Tahun (Tanggal Kegiatan)
             const month = extractMonth(r.tanggal);
             const year = extractYear(r.tanggal);
             const isValid = month !== null && year !== null;
@@ -455,6 +502,7 @@ const Filters = (function() {
         const { program, staf, bulan, tahun } = filters;
 
         return rows.filter(r => {
+            // Program (Proyek)
             if (program !== 'all' && program !== 'Blank') {
                 if ((r.proyek || '') !== program) return false;
             }
@@ -462,6 +510,7 @@ const Filters = (function() {
                 if (r.proyek && r.proyek !== '' && r.proyek !== '—') return false;
             }
 
+            // Staf
             if (staf !== 'all' && staf !== 'Blank') {
                 if ((r.staf || '') !== staf) return false;
             }
@@ -469,6 +518,7 @@ const Filters = (function() {
                 if (r.staf && r.staf !== '' && r.staf !== '—') return false;
             }
 
+            // Bulan & Tahun (Tgl)
             const month = extractMonth(r.tanggal);
             const year = extractYear(r.tanggal);
             const isValid = month !== null && year !== null;
