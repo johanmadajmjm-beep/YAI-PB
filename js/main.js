@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * main.js — Entry Point Dashboard (DENGAN FILTER PER TAB)
+ * main.js — Entry Point Dashboard (DENGAN ROUTER)
  * Yayasan Ayo Indonesia
  * ============================================================
  */
@@ -40,6 +40,11 @@
             Filters.initFilters(state.data);
         }
 
+        // Load halaman default (dashboard)
+        if (typeof Router !== 'undefined') {
+            Router.loadPage('dashboard');
+        }
+
         console.log('[Dashboard] Ready.');
     }
 
@@ -67,23 +72,10 @@
             if (data && !data.error) {
                 state.data = data;
                 state.filteredData = data;
+                window._dashboardData.currentData = data;
 
-                // Render dashboard utama
-                updateDashboard(data);
-
-                // Render halaman Beneficiary & PJUM (dengan data penuh)
-                if (typeof Pages !== 'undefined') {
-                    Pages.renderBeneficiaryPage(data);
-                    Pages.renderPjumPage(data);
-                }
-
-                // Render Wilayah
-                if (typeof Tables !== 'undefined') {
-                    Tables.renderWilayah(data);
-                }
-
-                Insights.generateInsight(data);
-                Filters.updateTop5(data);
+                // Filter diinisialisasi di main.js via Filters.initFilters()
+                // Yang akan memanggil populateSelect untuk semua filter
 
             } else {
                 throw new Error(data?.error || 'Data tidak valid');
@@ -100,7 +92,7 @@
     }
 
     /**
-     * Update dashboard utama dengan data baru
+     * Update dashboard utama dengan data baru (dipanggil dari filter)
      */
     function updateDashboard(data) {
         if (!data) return;
@@ -108,18 +100,16 @@
         window._dashboardData.currentData = data;
         state.filteredData = data;
 
+        // Update chart & metrik di halaman dashboard
         if (typeof Metrics !== 'undefined') {
             Metrics.renderMetrics(data);
         }
-
         if (typeof Charts !== 'undefined') {
             Charts.renderAllCharts(data);
         }
-
         if (typeof Insights !== 'undefined') {
             Insights.generateInsight(data);
         }
-
         if (typeof Filters !== 'undefined') {
             Filters.updateTop5(data);
         }
@@ -130,65 +120,17 @@
      */
     function setupNavigation() {
         const navLinks = document.querySelectorAll('.nav-links li');
-        const pages = {
-            dashboard: document.getElementById('page-dashboard'),
-            beneficiary: document.getElementById('page-beneficiary'),
-            pjum: document.getElementById('page-pjum'),
-            wilayah: document.getElementById('page-wilayah'),
-            analitik: document.getElementById('page-analitik'),
-            data: document.getElementById('page-data'),
-            laporan: document.getElementById('page-laporan'),
-            pengaturan: document.getElementById('page-pengaturan'),
-        };
-
-        // Filter bar per tab
-        const filterBars = {
-            dashboard: document.getElementById('filterBarDashboard'),
-            beneficiary: document.getElementById('filterBarBenef'),
-            pjum: document.getElementById('filterBarPjum'),
-        };
 
         navLinks.forEach(link => {
             link.addEventListener('click', function() {
                 const page = this.dataset.page;
                 state.currentTab = page;
 
-                // Update active class
-                navLinks.forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-
-                // Show/hide pages
-                Object.keys(pages).forEach(key => {
-                    if (pages[key]) {
-                        pages[key].classList.toggle('active', key === page);
-                    }
-                });
-
-                // Show/hide filter bars
-                Object.keys(filterBars).forEach(key => {
-                    if (filterBars[key]) {
-                        filterBars[key].style.display = (key === page) ? 'flex' : 'none';
-                    }
-                });
-
-                // Render konten sesuai halaman
-                if (page === 'beneficiary' && state.filteredData && typeof Pages !== 'undefined') {
-                    Pages.renderBeneficiaryPage(state.filteredData);
+                if (typeof Router !== 'undefined') {
+                    Router.loadPage(page);
                 }
-                if (page === 'pjum' && state.filteredData && typeof Pages !== 'undefined') {
-                    Pages.renderPjumPage(state.filteredData);
-                }
-                if (page === 'wilayah' && state.filteredData && typeof Tables !== 'undefined') {
-                    Tables.renderWilayah(state.filteredData);
-                }
-                // Dashboard sudah dirender di awal
             });
         });
-
-        // Tampilkan filter bar dashboard sebagai default
-        if (filterBars.dashboard) filterBars.dashboard.style.display = 'flex';
-        if (filterBars.beneficiary) filterBars.beneficiary.style.display = 'none';
-        if (filterBars.pjum) filterBars.pjum.style.display = 'none';
     }
 
     /**
