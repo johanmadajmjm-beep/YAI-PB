@@ -49,7 +49,7 @@ const Charts = (function() {
     }
 
     /**
-     * 1. Trend Beneficiary per Bulan (Line Chart) — FIXED
+     * 1. Trend Beneficiary per Bulan (Line Chart)
      */
     function renderTrendChart(data) {
         const ctx = document.getElementById('trendChart');
@@ -272,7 +272,7 @@ const Charts = (function() {
     }
 
     /**
-     * 4. Pengeluaran PJUM per Bulan (Bar Chart) — FIXED
+     * 4. Pengeluaran PJUM per Bulan (Bar Chart)
      */
     function renderPengeluaranChart(data) {
         const ctx = document.getElementById('pengeluaranChart');

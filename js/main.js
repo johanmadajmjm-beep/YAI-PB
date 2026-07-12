@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * main.js — Entry Point Dashboard (VERSI FIX TOTAL)
+ * main.js — Entry Point Dashboard
  * Yayasan Ayo Indonesia
  * ============================================================
  */
@@ -70,9 +70,16 @@
 
                 updateDashboard(data);
 
-                Tables.renderBenefTable(data);
-                Tables.renderPjumTable(data);
-                Tables.renderWilayah(data);
+                // Render halaman Beneficiary & PJUM
+                if (typeof Pages !== 'undefined') {
+                    Pages.renderBeneficiaryPage(data);
+                    Pages.renderPjumPage(data);
+                }
+
+                // Render Wilayah
+                if (typeof Tables !== 'undefined') {
+                    Tables.renderWilayah(data);
+                }
 
                 Insights.generateInsight(data);
                 Filters.updateTop5(data);
@@ -146,13 +153,14 @@
                     }
                 });
 
-                if (page === 'beneficiary' && state.filteredData) {
-                    Tables.renderBenefTable(state.filteredData);
+                // Render konten sesuai halaman
+                if (page === 'beneficiary' && state.filteredData && typeof Pages !== 'undefined') {
+                    Pages.renderBeneficiaryPage(state.filteredData);
                 }
-                if (page === 'pjum' && state.filteredData) {
-                    Tables.renderPjumTable(state.filteredData);
+                if (page === 'pjum' && state.filteredData && typeof Pages !== 'undefined') {
+                    Pages.renderPjumPage(state.filteredData);
                 }
-                if (page === 'wilayah' && state.filteredData) {
+                if (page === 'wilayah' && state.filteredData && typeof Tables !== 'undefined') {
                     Tables.renderWilayah(state.filteredData);
                 }
             });
@@ -166,10 +174,14 @@
         const modal = document.getElementById('detailModal');
         const closeBtn = document.getElementById('modalClose');
 
-        closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+        }
+
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.remove('show');
         });
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') modal.classList.remove('show');
         });
