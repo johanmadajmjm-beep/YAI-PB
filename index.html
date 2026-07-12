@@ -69,13 +69,11 @@
     <div id="page-dashboard" class="page active">
       <!-- Filter -->
       <div class="filter-bar">
+        <div class="fg fg-wide"><label>Program</label><select id="dash-proyek"><option value="">Semua</option></select></div>
+        <div class="fg"><label>Staf</label><select id="dash-staf"><option value="">Semua</option></select></div>
         <div class="fg fg-sm"><label>Tahun</label><select id="dash-tahun"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Kabupaten</label><select id="dash-kab"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Kecamatan</label><select id="dash-kec"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Desa</label><select id="dash-desa"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Jenis</label><select id="dash-jenis"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Bulan</label><select id="dash-bulan"><option value="">Semua</option></select></div>
         <div class="filter-actions">
-          <button class="btn-filter primary" onclick="applyDashFilter()">🔽 Filter</button>
           <button class="btn-filter secondary" onclick="resetDashFilter()">↺ Reset</button>
         </div>
       </div>
