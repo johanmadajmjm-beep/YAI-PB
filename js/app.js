@@ -73,40 +73,97 @@ function buildAll() {
   if (al) al.style.display = 'flex';
 }
 
+/* ── normKey: key untuk deduplikasi (lowercase, spasi di sekitar - dihapus) ──
+   "Ayo - JPM" → "ayo-jpm"
+   "AYO-JPM"   → "ayo-jpm"
+   "Ayo  -  JPM" → "ayo-jpm"
+── */
+function normKey(s) {
+  if (!s) return '';
+  return String(s).trim()
+    .replace(/\s*-\s*/g, '-')   // "Ayo - JPM" → "Ayo-JPM"
+    .replace(/\s+/g, ' ')        // collapse spaces
+    .toLowerCase();
+}
+
+/* ── normStafKey: untuk staf — hanya lowercase + trim ── */
+function normStafKey(s) {
+  if (!s) return '';
+  return String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/* ── dedup: deduplikasi array string berdasarkan normKey, pilih versi terbaik ──
+   "terbaik" = yang paling banyak muncul, atau kalau sama, yang Title Case
+── */
+function dedupByNormKey(arr, keyFn) {
+  var map = {};   // normKey → {best, count}
+  arr.forEach(function(val) {
+    if (!val || !String(val).trim()) return;
+    var k = keyFn(val);
+    if (!k) return;
+    if (!map[k]) {
+      map[k] = { best: val, count: 1 };
+    } else {
+      map[k].count++;
+      // Prefer Title Case version (first char uppercase, rest mixed)
+      var cur = map[k].best;
+      var isCurTitle  = cur  === cur.charAt(0).toUpperCase() + cur.slice(1);
+      var isValTitle  = val  === val.charAt(0).toUpperCase() + val.slice(1);
+      if (!isCurTitle && isValTitle) map[k].best = val;
+    }
+  });
+  return Object.values(map)
+    .map(function(x) { return x.best; })
+    .filter(Boolean)
+    .sort(function(a,b) { return a.localeCompare(b); });
+}
+
 /* Dashboard filter helpers */
 function populateDashFilters() {
   var pjum  = window.rawPjum;
   var benef = window.rawBenef;
   var P = window.P, B = window.B;
 
-  // Program: gabungan dari PJUM dan Benef
-  var allProg = uniqArr(
-    pjum.map(function(r){return r[P.proyek];}).concat(
-    benef.map(function(r){return r[B.proyek];}))
-  );
+  // 1. Program: kolom proyek (PJUM) + kolom program pendukung (Benef)
+  //    deduplikasi berdasarkan normKey agar "Ayo - JPM" = "AYO-JPM"
+  var rawProg = pjum.map(function(r){return r[P.proyek];})
+    .concat(benef.map(function(r){return r[B.proyek];}));
+  var allProg = dedupByNormKey(rawProg, normKey);
   populateSel('dash-proyek', allProg);
 
-  // Staf: gabungan dari PJUM dan Benef
-  var allStaf = uniqArr(
-    pjum.map(function(r){return r[P.staf];}).concat(
-    benef.map(function(r){return r[B.staf];}))
-  );
+  // 2. Staf: kolom staf (PJUM) + kolom nama staf (Benef)
+  var rawStaf = pjum.map(function(r){return r[P.staf];})
+    .concat(benef.map(function(r){return r[B.staf];}));
+  var allStaf = dedupByNormKey(rawStaf, normStafKey);
   populateSel('dash-staf', allStaf);
 
-  // Tahun: gabungan
-  var allTahun = uniqArr(
-    pjum.map(function(r){return r[P.tgl]?r[P.tgl].slice(0,4):null;}).filter(Boolean).concat(
-    benef.map(function(r){return r[B.tgl]?r[B.tgl].slice(0,4):null;}).filter(Boolean))
-  ).reverse();
+  // 3. Tahun: dari tgl PJUM + tanggal kegiatan Benef, ambil tahun saja
+  var tahunSet = {};
+  pjum.forEach(function(r) {
+    var t = r[P.tgl] ? String(r[P.tgl]).slice(0,4) : null;
+    if (t && t.match(/^20\d{2}$/)) tahunSet[t] = 1;
+  });
+  benef.forEach(function(r) {
+    var t = r[B.tgl] ? String(r[B.tgl]).slice(0,4) : null;
+    if (t && t.match(/^20\d{2}$/)) tahunSet[t] = 1;
+  });
+  var allTahun = Object.keys(tahunSet).sort().reverse();
   populateSel('dash-tahun', allTahun);
 
-  // Bulan
-  populateSel('dash-bulan',
-    ['01','02','03','04','05','06','07','08','09','10','11','12'],
-    bulanName
-  );
+  // 4. Bulan: dari tgl PJUM + tanggal kegiatan Benef, ambil bulan yang benar-benar ada
+  var bulanSet = {};
+  pjum.forEach(function(r) {
+    var m = r[P.tgl] ? String(r[P.tgl]).slice(5,7) : null;
+    if (m && m.match(/^(0[1-9]|1[0-2])$/)) bulanSet[m] = 1;
+  });
+  benef.forEach(function(r) {
+    var m = r[B.tgl] ? String(r[B.tgl]).slice(5,7) : null;
+    if (m && m.match(/^(0[1-9]|1[0-2])$/)) bulanSet[m] = 1;
+  });
+  var allBulan = Object.keys(bulanSet).sort();
+  populateSel('dash-bulan', allBulan, bulanName);
 
-  // Attach listener sekali saja (cek flag)
+  // Attach listener sekali saja
   if (!window._dashFilterAttached) {
     ['dash-proyek','dash-staf','dash-tahun','dash-bulan'].forEach(function(id) {
       var el = document.getElementById(id);
@@ -123,19 +180,22 @@ function getDashFiltered() {
   var bulan  = v('dash-bulan');
   var P = window.P, B = window.B;
 
+  var proyekKey = proyek ? normKey(proyek) : '';
+  var stafKey   = staf   ? normStafKey(staf) : '';
+
   var filteredBenef = window.rawBenef.filter(function(r) {
-    if (proyek && r[B.proyek] !== proyek) return false;
-    if (staf   && r[B.staf]  !== staf)   return false;
-    if (tahun  && !(r[B.tgl]||'').startsWith(tahun)) return false;
-    if (bulan  && (r[B.tgl]||'').slice(5,7) !== bulan) return false;
+    if (proyekKey && normKey(r[B.proyek])     !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[B.staf])   !== stafKey)   return false;
+    if (tahun     && !(r[B.tgl]||'').startsWith(tahun))      return false;
+    if (bulan     && (r[B.tgl]||'').slice(5,7) !== bulan)    return false;
     return true;
   });
 
   var filteredPjum = window.rawPjum.filter(function(r) {
-    if (proyek && r[P.proyek] !== proyek) return false;
-    if (staf   && r[P.staf]  !== staf)   return false;
-    if (tahun  && !(r[P.tgl]||'').startsWith(tahun)) return false;
-    if (bulan  && (r[P.tgl]||'').slice(5,7) !== bulan) return false;
+    if (proyekKey && normKey(r[P.proyek])     !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[P.staf])   !== stafKey)   return false;
+    if (tahun     && !(r[P.tgl]||'').startsWith(tahun))      return false;
+    if (bulan     && (r[P.tgl]||'').slice(5,7) !== bulan)    return false;
     return true;
   });
 
