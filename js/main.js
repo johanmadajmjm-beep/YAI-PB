@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * main.js — Entry Point Dashboard
+ * main.js — Entry Point Dashboard (DENGAN FILTER PER TAB)
  * Yayasan Ayo Indonesia
  * ============================================================
  */
@@ -15,6 +15,7 @@
         filteredData: null,
         loading: false,
         error: null,
+        currentTab: 'dashboard'
     };
 
     window._dashboardData = {
@@ -35,6 +36,7 @@
         await loadData();
 
         if (state.data) {
+            // Inisialisasi filter untuk semua tab
             Filters.initFilters(state.data);
         }
 
@@ -54,8 +56,6 @@
             const data = await API.getAdminData();
 
             console.log('[Dashboard] Data received:', data);
-            console.log('[Dashboard] Benef byBulan:', data.benef?.byBulan);
-            console.log('[Dashboard] Pjum byBulan:', data.pjum?.byBulan);
 
             // Cek Chart.js
             if (typeof Chart === 'undefined') {
@@ -68,9 +68,10 @@
                 state.data = data;
                 state.filteredData = data;
 
+                // Render dashboard utama
                 updateDashboard(data);
 
-                // Render halaman Beneficiary & PJUM
+                // Render halaman Beneficiary & PJUM (dengan data penuh)
                 if (typeof Pages !== 'undefined') {
                     Pages.renderBeneficiaryPage(data);
                     Pages.renderPjumPage(data);
@@ -99,7 +100,7 @@
     }
 
     /**
-     * Update dashboard dengan data baru
+     * Update dashboard utama dengan data baru
      */
     function updateDashboard(data) {
         if (!data) return;
@@ -140,16 +141,33 @@
             pengaturan: document.getElementById('page-pengaturan'),
         };
 
+        // Filter bar per tab
+        const filterBars = {
+            dashboard: document.getElementById('filterBarDashboard'),
+            beneficiary: document.getElementById('filterBarBenef'),
+            pjum: document.getElementById('filterBarPjum'),
+        };
+
         navLinks.forEach(link => {
             link.addEventListener('click', function() {
                 const page = this.dataset.page;
+                state.currentTab = page;
 
+                // Update active class
                 navLinks.forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
 
+                // Show/hide pages
                 Object.keys(pages).forEach(key => {
                     if (pages[key]) {
                         pages[key].classList.toggle('active', key === page);
+                    }
+                });
+
+                // Show/hide filter bars
+                Object.keys(filterBars).forEach(key => {
+                    if (filterBars[key]) {
+                        filterBars[key].style.display = (key === page) ? 'flex' : 'none';
                     }
                 });
 
@@ -163,8 +181,14 @@
                 if (page === 'wilayah' && state.filteredData && typeof Tables !== 'undefined') {
                     Tables.renderWilayah(state.filteredData);
                 }
+                // Dashboard sudah dirender di awal
             });
         });
+
+        // Tampilkan filter bar dashboard sebagai default
+        if (filterBars.dashboard) filterBars.dashboard.style.display = 'flex';
+        if (filterBars.beneficiary) filterBars.beneficiary.style.display = 'none';
+        if (filterBars.pjum) filterBars.pjum.style.display = 'none';
     }
 
     /**

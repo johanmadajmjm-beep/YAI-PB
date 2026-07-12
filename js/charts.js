@@ -58,6 +58,12 @@ const Charts = (function() {
             return;
         }
 
+        // Hapus chart lama jika ada
+        if (chartInstances.trend) {
+            chartInstances.trend.destroy();
+            delete chartInstances.trend;
+        }
+
         const byBulan = data.benef?.byBulan || {};
 
         // Jika data kosong, tampilkan pesan
@@ -85,6 +91,18 @@ const Charts = (function() {
 
         const sortedMonths = Object.keys(filtered).sort();
         
+        // Jika setelah filter tidak ada data
+        if (sortedMonths.length === 0) {
+            const parent = ctx.parentElement;
+            if (parent) {
+                parent.innerHTML = `<div style="text-align:center;color:var(--gray-400);padding:40px 0;">
+                    <i class="fas fa-chart-line fa-2x" style="display:block;margin-bottom:8px;"></i>
+                    Tidak ada data trend (tahun 2020-2026)
+                </div>`;
+            }
+            return;
+        }
+        
         // Batasi label maksimal 20
         let labels = [];
         let values = [];
@@ -104,11 +122,6 @@ const Charts = (function() {
                 return monthNames[parseInt(month)-1] + ' ' + year;
             });
             values = sortedMonths.map(m => filtered[m] || 0);
-        }
-
-        // Hapus chart lama jika ada
-        if (chartInstances.trend) {
-            chartInstances.trend.destroy();
         }
 
         chartInstances.trend = new Chart(ctx, {
@@ -162,6 +175,11 @@ const Charts = (function() {
         const ctx = document.getElementById('distribusiChart');
         if (!ctx) return;
 
+        if (chartInstances.distribusi) {
+            chartInstances.distribusi.destroy();
+            delete chartInstances.distribusi;
+        }
+
         const byKategori = data.benef?.byKategori || {};
 
         if (Object.keys(byKategori).length === 0) {
@@ -179,8 +197,6 @@ const Charts = (function() {
         const labels = sorted.map(item => item[0]);
         const values = sorted.map(item => item[1]);
         const colors = CONFIG.CHART_COLORS.slice(0, labels.length);
-
-        if (chartInstances.distribusi) chartInstances.distribusi.destroy();
 
         chartInstances.distribusi = new Chart(ctx, {
             type: 'doughnut',
@@ -218,6 +234,11 @@ const Charts = (function() {
         const ctx = document.getElementById('desaChart');
         if (!ctx) return;
 
+        if (chartInstances.desa) {
+            chartInstances.desa.destroy();
+            delete chartInstances.desa;
+        }
+
         const byDesa = data.benef?.byDesa || {};
 
         if (Object.keys(byDesa).length === 0) {
@@ -236,8 +257,6 @@ const Charts = (function() {
         const labels = top.map(item => item[0]);
         const values = top.map(item => item[1]);
         const colors = CONFIG.CHART_COLORS.slice(0, labels.length);
-
-        if (chartInstances.desa) chartInstances.desa.destroy();
 
         chartInstances.desa = new Chart(ctx, {
             type: 'bar',
@@ -278,6 +297,11 @@ const Charts = (function() {
         const ctx = document.getElementById('pengeluaranChart');
         if (!ctx) return;
 
+        if (chartInstances.pengeluaran) {
+            chartInstances.pengeluaran.destroy();
+            delete chartInstances.pengeluaran;
+        }
+
         const byBulan = data.pjum?.byBulan || {};
 
         if (Object.keys(byBulan).length === 0) {
@@ -303,6 +327,17 @@ const Charts = (function() {
 
         const sortedMonths = Object.keys(filtered).sort();
         
+        if (sortedMonths.length === 0) {
+            const parent = ctx.parentElement;
+            if (parent) {
+                parent.innerHTML = `<div style="text-align:center;color:var(--gray-400);padding:40px 0;">
+                    <i class="fas fa-money-bill-wave fa-2x" style="display:block;margin-bottom:8px;"></i>
+                    Tidak ada data pengeluaran (tahun 2020-2026)
+                </div>`;
+            }
+            return;
+        }
+        
         let labels = [];
         let values = [];
         if (sortedMonths.length > 20) {
@@ -322,8 +357,6 @@ const Charts = (function() {
             });
             values = sortedMonths.map(m => filtered[m] || 0);
         }
-
-        if (chartInstances.pengeluaran) chartInstances.pengeluaran.destroy();
 
         chartInstances.pengeluaran = new Chart(ctx, {
             type: 'bar',
@@ -377,7 +410,7 @@ const Charts = (function() {
     }
 
     /**
-     * Update semua chart (saat filter berubah)
+     * Update semua chart (saat filter dashboard berubah)
      * @param {object} filteredData - Data yang sudah difilter
      */
     function updateCharts(filteredData) {

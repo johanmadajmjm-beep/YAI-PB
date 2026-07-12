@@ -58,28 +58,42 @@ const Pages = (function() {
         const ctx = document.getElementById('benefTrendChart');
         if (!ctx) return;
 
+        // Hapus chart lama jika ada
+        if (chartInstances.benefTrend) {
+            chartInstances.benefTrend.destroy();
+            delete chartInstances.benefTrend;
+        }
+
         const byBulan = benef.byBulan || {};
         if (Object.keys(byBulan).length === 0) {
             showEmptyState(ctx, 'Tidak ada data trend');
             return;
         }
 
+        // Filter tahun valid (2020-2026)
         const validYears = ['2020','2021','2022','2023','2024','2025','2026'];
         const filtered = {};
         Object.keys(byBulan).forEach(key => {
             const year = key.substring(0,4);
-            if (validYears.includes(year)) filtered[key] = byBulan[key];
+            if (validYears.includes(year)) {
+                filtered[key] = byBulan[key];
+            }
         });
 
         const sorted = Object.keys(filtered).sort();
+        
+        // Jika setelah filter tidak ada data
+        if (sorted.length === 0) {
+            showEmptyState(ctx, 'Tidak ada data trend (tahun 2020-2026)');
+            return;
+        }
+        
         const labels = sorted.map(m => {
             const [year, month] = m.split('-');
             const names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             return names[parseInt(month)-1] + ' ' + year;
         });
         const values = sorted.map(m => filtered[m] || 0);
-
-        if (chartInstances.benefTrend) chartInstances.benefTrend.destroy();
 
         chartInstances.benefTrend = new Chart(ctx, {
             type: 'line',
@@ -122,6 +136,11 @@ const Pages = (function() {
         const ctx = document.getElementById('benefDistribusiChart');
         if (!ctx) return;
 
+        if (chartInstances.benefDistribusi) {
+            chartInstances.benefDistribusi.destroy();
+            delete chartInstances.benefDistribusi;
+        }
+
         const byKategori = benef.byKategori || {};
         if (Object.keys(byKategori).length === 0) {
             showEmptyState(ctx, 'Tidak ada data distribusi');
@@ -132,8 +151,6 @@ const Pages = (function() {
         const labels = sorted.map(item => item[0]);
         const values = sorted.map(item => item[1]);
         const colors = CONFIG.CHART_COLORS.slice(0, labels.length);
-
-        if (chartInstances.benefDistribusi) chartInstances.benefDistribusi.destroy();
 
         chartInstances.benefDistribusi = new Chart(ctx, {
             type: 'doughnut',
@@ -167,6 +184,11 @@ const Pages = (function() {
         const ctx = document.getElementById('benefDesaChart');
         if (!ctx) return;
 
+        if (chartInstances.benefDesa) {
+            chartInstances.benefDesa.destroy();
+            delete chartInstances.benefDesa;
+        }
+
         const byDesa = benef.byDesa || {};
         if (Object.keys(byDesa).length === 0) {
             showEmptyState(ctx, 'Tidak ada data desa');
@@ -177,8 +199,6 @@ const Pages = (function() {
         const labels = sorted.map(item => item[0]);
         const values = sorted.map(item => item[1]);
         const colors = CONFIG.CHART_COLORS.slice(0, labels.length);
-
-        if (chartInstances.benefDesa) chartInstances.benefDesa.destroy();
 
         chartInstances.benefDesa = new Chart(ctx, {
             type: 'bar',
@@ -242,28 +262,40 @@ const Pages = (function() {
         const ctx = document.getElementById('pjumPengeluaranChart');
         if (!ctx) return;
 
+        if (chartInstances.pjumPengeluaran) {
+            chartInstances.pjumPengeluaran.destroy();
+            delete chartInstances.pjumPengeluaran;
+        }
+
         const byBulan = pjum.byBulan || {};
         if (Object.keys(byBulan).length === 0) {
             showEmptyState(ctx, 'Tidak ada data pengeluaran');
             return;
         }
 
+        // Filter tahun valid (2020-2026)
         const validYears = ['2020','2021','2022','2023','2024','2025','2026'];
         const filtered = {};
         Object.keys(byBulan).forEach(key => {
             const year = key.substring(0,4);
-            if (validYears.includes(year)) filtered[key] = byBulan[key];
+            if (validYears.includes(year)) {
+                filtered[key] = byBulan[key];
+            }
         });
 
         const sorted = Object.keys(filtered).sort();
+        
+        if (sorted.length === 0) {
+            showEmptyState(ctx, 'Tidak ada data pengeluaran (tahun 2020-2026)');
+            return;
+        }
+        
         const labels = sorted.map(m => {
             const [year, month] = m.split('-');
             const names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             return names[parseInt(month)-1] + ' ' + year;
         });
         const values = sorted.map(m => filtered[m] || 0);
-
-        if (chartInstances.pjumPengeluaran) chartInstances.pjumPengeluaran.destroy();
 
         chartInstances.pjumPengeluaran = new Chart(ctx, {
             type: 'bar',
@@ -323,6 +355,11 @@ const Pages = (function() {
         const ctx = document.getElementById('pjumKomponenChart');
         if (!ctx) return;
 
+        if (chartInstances.pjumKomponen) {
+            chartInstances.pjumKomponen.destroy();
+            delete chartInstances.pjumKomponen;
+        }
+
         const byKomponen = pjum.byKomponen || {};
         if (Object.keys(byKomponen).length === 0) {
             showEmptyState(ctx, 'Tidak ada data komponen');
@@ -333,8 +370,6 @@ const Pages = (function() {
         const labels = sorted.map(item => item[0]);
         const values = sorted.map(item => item[1]);
         const colors = CONFIG.CHART_COLORS.slice(0, labels.length);
-
-        if (chartInstances.pjumKomponen) chartInstances.pjumKomponen.destroy();
 
         chartInstances.pjumKomponen = new Chart(ctx, {
             type: 'doughnut',
