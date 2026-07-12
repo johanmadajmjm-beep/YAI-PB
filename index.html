@@ -9,16 +9,16 @@
 </head>
 <body>
 
-<!-- ══ LOADING OVERLAY ══ -->
+<!-- LOADING -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
   <p>Memuat data dari Google Sheets…</p>
 </div>
 
-<!-- ══ APP LAYOUT ══ -->
+<!-- APP -->
 <div id="app-layout" class="layout" style="display:none">
 
-  <!-- ─── SIDEBAR ─── -->
+  <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon">🧡</div>
@@ -27,31 +27,16 @@
         <div class="name">YAI Dashboard</div>
       </div>
     </div>
-
     <nav class="sidebar-nav">
       <div class="nav-section-label">Menu Utama</div>
-      <button class="nav-item active" data-page="dashboard">
-        <span class="nav-icon">📊</span> Dashboard
-      </button>
-      <button class="nav-item" data-page="beneficiary">
-        <span class="nav-icon">👥</span> Beneficiary
-      </button>
-      <button class="nav-item" data-page="pjum">
-        <span class="nav-icon">💰</span> PJUM
-      </button>
-      <button class="nav-item" data-page="wilayah">
-        <span class="nav-icon">🗺️</span> Wilayah
-      </button>
-
+      <button class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span> Dashboard</button>
+      <button class="nav-item" data-page="beneficiary"><span class="nav-icon">👥</span> Beneficiary</button>
+      <button class="nav-item" data-page="pjum"><span class="nav-icon">💰</span> PJUM</button>
+      <button class="nav-item" data-page="wilayah"><span class="nav-icon">🗺️</span> Wilayah</button>
       <div class="nav-section-label">Analisis</div>
-      <button class="nav-item" data-page="analitik">
-        <span class="nav-icon">📈</span> Analitik
-      </button>
-      <button class="nav-item" data-page="laporan">
-        <span class="nav-icon">📋</span> Laporan
-      </button>
+      <button class="nav-item" data-page="analitik"><span class="nav-icon">📈</span> Analitik</button>
+      <button class="nav-item" data-page="laporan"><span class="nav-icon">📋</span> Laporan</button>
     </nav>
-
     <div class="sidebar-quote">
       <div class="sidebar-quote-inner">
         <div class="q-icon">❝</div>
@@ -60,20 +45,17 @@
     </div>
   </aside>
 
-  <!-- ─── TOPBAR ─── -->
+  <!-- TOPBAR -->
   <header class="topbar">
     <div class="topbar-title" id="topbar-title">Executive Dashboard</div>
     <div class="topbar-right">
-      <div class="topbar-date">
-        <span>📅</span> <span id="topbar-date-val">—</span>
-      </div>
+      <div class="topbar-date">📅 <span id="topbar-date-val">—</span></div>
       <button class="refresh-btn" id="btn-refresh">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-        </svg>
-        Refresh
+        </svg> Refresh
       </button>
-      <div class="topbar-icon-btn" title="Notifikasi">🔔</div>
+      <div class="topbar-icon-btn">🔔</div>
       <div class="topbar-avatar">
         <div class="av-circle">A</div>
         <div class="av-name">Admin</div>
@@ -81,17 +63,13 @@
     </div>
   </header>
 
-  <!-- ─── MAIN CONTENT ─── -->
   <main class="main">
 
-    <!-- ══════════════════════════════════════
-         PAGE: DASHBOARD
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ DASHBOARD ════════════════════ -->
     <div id="page-dashboard" class="page active">
-
-      <!-- Filter Bar -->
+      <!-- Filter -->
       <div class="filter-bar">
-        <div class="fg"><label>Tahun</label><select id="dash-tahun"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Tahun</label><select id="dash-tahun"><option value="">Semua</option></select></div>
         <div class="fg"><label>Kabupaten</label><select id="dash-kab"><option value="">Semua</option></select></div>
         <div class="fg"><label>Kecamatan</label><select id="dash-kec"><option value="">Semua</option></select></div>
         <div class="fg"><label>Desa</label><select id="dash-desa"><option value="">Semua</option></select></div>
@@ -101,8 +79,7 @@
           <button class="btn-filter secondary" onclick="resetDashFilter()">↺ Reset</button>
         </div>
       </div>
-
-      <!-- KPI Cards -->
+      <!-- KPI -->
       <div class="stat-grid g4">
         <div class="stat-card sc-orange">
           <div class="stat-icon-wrap">👥</div>
@@ -137,24 +114,19 @@
           </div>
         </div>
       </div>
-
-      <!-- Chart Row 1 -->
+      <!-- Charts row 1 -->
       <div class="chart-grid g-6-4">
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Trend Beneficiary per Bulan</div>
-          </div>
+          <div class="chart-title">Trend Beneficiary per Bulan</div>
           <div class="chart-sub">Jumlah penerima manfaat dari waktu ke waktu</div>
           <div class="chart-wrap h220"><canvas id="ch-dash-benef-trend"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Distribusi Jenis Beneficiary</div>
-          </div>
+          <div class="chart-title">Distribusi Jenis Beneficiary</div>
           <div class="chart-sub">Kategori penerima manfaat</div>
-          <div class="donut-wrap" style="margin-top:8px">
-            <div class="donut-chart-area" style="width:160px;height:160px;position:relative">
-              <canvas id="ch-dash-benef-donut" width="160" height="160"></canvas>
+          <div class="donut-wrap" style="margin-top:10px;height:180px">
+            <div class="donut-chart-area" style="width:150px;height:150px;position:relative;flex-shrink:0">
+              <canvas id="ch-dash-benef-donut" width="150" height="150"></canvas>
               <div class="donut-center">
                 <div class="dc-val" id="donut-center-val">—</div>
                 <div class="dc-lbl" id="donut-center-lbl">Total</div>
@@ -164,170 +136,134 @@
           </div>
         </div>
       </div>
-
-      <!-- Chart Row 2 -->
-      <div class="chart-grid g-6-4" style="margin-top:0">
+      <!-- Charts row 2 -->
+      <div class="chart-grid g-6-4">
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Beneficiary per Kabupaten</div>
-          </div>
-          <div class="chart-sub">Sebaran penerima manfaat per wilayah kabupaten</div>
+          <div class="chart-title">Beneficiary per Kabupaten</div>
+          <div class="chart-sub">Sebaran penerima manfaat per wilayah</div>
           <div class="rank-list" id="rank-kab" style="margin-top:8px"></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Pengeluaran PJUM per Bulan</div>
-          </div>
+          <div class="chart-title">Pengeluaran PJUM per Bulan</div>
           <div class="chart-sub">Total biaya kegiatan per bulan</div>
           <div class="chart-wrap h220"><canvas id="ch-dash-pjum-trend"></canvas></div>
         </div>
       </div>
-
-      <!-- Chart Row 3 -->
-      <div class="chart-grid g3" style="margin-top:16px">
+      <!-- Charts row 3 -->
+      <div class="chart-grid g3 section-gap">
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Top 5 Jenis Kegiatan</div>
-          </div>
+          <div class="chart-title">Top 5 Jenis Kegiatan</div>
           <div class="chart-sub">Dari data beneficiary</div>
           <div class="rank-list" id="rank-kegiatan" style="margin-top:8px"></div>
         </div>
         <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Top 5 Benefit Diterima</div>
-          </div>
-          <div class="chart-sub">Jenis benefit yang paling banyak diberikan</div>
+          <div class="chart-title">Top 5 Benefit Diterima</div>
+          <div class="chart-sub">Jenis benefit terbanyak</div>
           <div class="rank-list" id="rank-benefit" style="margin-top:8px"></div>
         </div>
         <div class="ai-box">
-          <div class="ai-box-header">
-            <div class="ai-icon">🤖</div>
-            <div class="ai-title">AI Insight</div>
-          </div>
+          <div class="ai-box-header"><div class="ai-icon">🤖</div><div class="ai-title">AI Insight</div></div>
           <div class="ai-text" id="ai-insight-text">Menganalisis data…</div>
           <button class="ai-btn" onclick="navigate('analitik')">Lihat Detail Analitik →</button>
         </div>
       </div>
+    </div>
 
-    </div><!-- /page-dashboard -->
 
-
-    <!-- ══════════════════════════════════════
-         PAGE: BENEFICIARY
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ BENEFICIARY ════════════════════ -->
     <div id="page-beneficiary" class="page">
-
+      <!-- Filter — 2 baris, lebih rapi -->
       <div class="filter-bar">
-        <div class="fg"><label>Program</label><select id="bf-proyek"><option value="">Semua</option></select></div>
+        <div class="fg fg-wide"><label>Program</label><select id="bf-proyek"><option value="">Semua</option></select></div>
         <div class="fg"><label>Staf</label><select id="bf-staf"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Kategori</label><select id="bf-kategori"><option value="">Semua</option></select></div>
+        <div class="fg fg-wide"><label>Kategori</label><select id="bf-kategori"><option value="">Semua</option></select></div>
         <div class="fg"><label>Kabupaten</label><select id="bf-kab"><option value="">Semua</option></select></div>
         <div class="fg"><label>Kecamatan</label><select id="bf-kec"><option value="">Semua</option></select></div>
         <div class="fg"><label>Disabilitas</label><select id="bf-disab"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Jenis Kelamin</label>
-          <select id="bf-gender">
-            <option value="">Semua</option>
-            <option value="L">Laki-laki</option>
-            <option value="P">Perempuan</option>
-          </select>
+        <div class="fg fg-sm"><label>Jenis Kelamin</label>
+          <select id="bf-gender"><option value="">Semua</option><option value="L">Laki-laki</option><option value="P">Perempuan</option></select>
         </div>
-        <div class="fg"><label>Tahun</label><select id="bf-tahun"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Bulan</label><select id="bf-bulan"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Cari</label><input type="text" id="bf-cari" placeholder="nama / desa / kegiatan…"/></div>
+        <div class="fg fg-sm"><label>Tahun</label><select id="bf-tahun"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Bulan</label><select id="bf-bulan"><option value="">Semua</option></select></div>
+        <div class="fg fg-wide"><label>Cari</label><input type="text" id="bf-cari" placeholder="nama / desa / kegiatan…"/></div>
         <div class="filter-actions">
           <button class="btn-filter secondary" id="bf-reset">↺ Reset</button>
         </div>
       </div>
-
-      <!-- Stat Cards -->
+      <!-- KPI -->
       <div class="stat-grid g4">
         <div class="stat-card sc-orange" id="bstat-total">
           <div class="stat-icon-wrap">👥</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Benef (Baris)</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Benef (Baris)</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-blue" id="bstat-lp">
           <div class="stat-icon-wrap">⚖️</div>
-          <div class="stat-body">
-            <div class="stat-label">Laki-laki / Perempuan</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Laki-laki / Perempuan</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-green" id="bstat-desa">
           <div class="stat-icon-wrap">🏘️</div>
-          <div class="stat-body">
-            <div class="stat-label">Desa Terjangkau</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Desa Terjangkau</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-purple" id="bstat-prog">
           <div class="stat-icon-wrap">📁</div>
-          <div class="stat-body">
-            <div class="stat-label">Program Aktif</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Program Aktif</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
       </div>
-
-      <!-- Charts Row 1 -->
+      <!-- Row 1: trend + gender donut -->
       <div class="chart-grid g-7-3">
         <div class="chart-card">
           <div class="chart-title">Trend Benef per Bulan</div>
           <div class="chart-sub">Jumlah penerima manfaat dari waktu ke waktu</div>
           <div class="chart-wrap h220"><canvas id="bch-trend"></canvas></div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card gender-donut-card">
           <div class="chart-title">Jenis Kelamin</div>
           <div class="chart-sub">Distribusi gender penerima</div>
-          <div class="chart-wrap h180" style="margin-top:20px"><canvas id="bch-gender"></canvas></div>
+          <div class="donut-wrap" style="justify-content:center;flex-direction:column;align-items:center;gap:12px;padding-top:4px">
+            <div style="position:relative;width:130px;height:130px;flex-shrink:0">
+              <canvas id="bch-gender" width="130" height="130"></canvas>
+            </div>
+            <div class="donut-legend" id="bch-gender-legend" style="width:100%;max-width:180px"></div>
+          </div>
         </div>
       </div>
-
-      <!-- Charts Row 2 -->
-      <div class="chart-grid g3" style="margin-top:0">
+      <!-- Row 2 -->
+      <div class="chart-grid g3">
         <div class="chart-card">
           <div class="chart-title">Per Kategori Benef</div>
           <div class="chart-sub">Jenis/kategori penerima manfaat</div>
-          <div class="chart-wrap h260"><canvas id="bch-kategori"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-kategori"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Per Kategori Usia</div>
           <div class="chart-sub">Kelompok umur penerima</div>
-          <div class="chart-wrap h260"><canvas id="bch-usia"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-usia"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Per Program</div>
           <div class="chart-sub">Jumlah benef tiap program</div>
-          <div class="chart-wrap h260"><canvas id="bch-proyek"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-proyek"></canvas></div>
         </div>
       </div>
-
-      <!-- Charts Row 3 -->
-      <div class="chart-grid g3" style="margin-top:0">
+      <!-- Row 3 -->
+      <div class="chart-grid g3">
         <div class="chart-card">
           <div class="chart-title">Top 10 Desa/Kelurahan</div>
           <div class="chart-sub">Wilayah dengan benef terbanyak</div>
-          <div class="chart-wrap h260"><canvas id="bch-desa"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-desa"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Per Staf</div>
           <div class="chart-sub">Jumlah benef tiap staf</div>
-          <div class="chart-wrap h260"><canvas id="bch-staf"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-staf"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Jenis Disabilitas</div>
           <div class="chart-sub">Distribusi disabilitas penerima</div>
-          <div class="chart-wrap h260"><canvas id="bch-disab"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="bch-disab"></canvas></div>
         </div>
       </div>
-
-      <!-- Data Table -->
+      <!-- Table -->
       <div class="table-card">
         <div class="table-header">
           <h3>Data Beneficiary Lengkap</h3>
@@ -353,64 +289,41 @@
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- /page-beneficiary -->
 
-
-    <!-- ══════════════════════════════════════
-         PAGE: PJUM
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ PJUM ════════════════════ -->
     <div id="page-pjum" class="page">
-
       <div class="filter-bar">
-        <div class="fg"><label>Program/Proyek</label><select id="pf-proyek"><option value="">Semua</option></select></div>
+        <div class="fg fg-wide"><label>Program/Proyek</label><select id="pf-proyek"><option value="">Semua</option></select></div>
         <div class="fg"><label>Staf</label><select id="pf-staf"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Kode Kegiatan</label><select id="pf-kode"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Tahun</label><select id="pf-tahun"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Bulan</label><select id="pf-bulan"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Cari</label><input type="text" id="pf-cari" placeholder="kegiatan / item…"/></div>
+        <div class="fg fg-wide"><label>Kode Kegiatan</label><select id="pf-kode"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Tahun</label><select id="pf-tahun"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Bulan</label><select id="pf-bulan"><option value="">Semua</option></select></div>
+        <div class="fg fg-wide"><label>Cari</label><input type="text" id="pf-cari" placeholder="kegiatan / item…"/></div>
         <div class="filter-actions">
           <button class="btn-filter secondary" id="pf-reset">↺ Reset</button>
         </div>
       </div>
-
-      <!-- Stat Cards -->
       <div class="stat-grid g4">
         <div class="stat-card sc-purple" id="pstat-total">
           <div class="stat-icon-wrap">💵</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Biaya</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Biaya</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-orange" id="pstat-trx">
           <div class="stat-icon-wrap">📋</div>
-          <div class="stat-body">
-            <div class="stat-label">Jumlah Transaksi</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Jumlah Transaksi</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-blue" id="pstat-prog">
           <div class="stat-icon-wrap">📁</div>
-          <div class="stat-body">
-            <div class="stat-label">Program Aktif</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Program Aktif</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
         <div class="stat-card sc-green" id="pstat-staf">
           <div class="stat-icon-wrap">👤</div>
-          <div class="stat-body">
-            <div class="stat-label">Staf Terlibat</div>
-            <div class="stat-value">—</div>
-            <div class="stat-sub">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Staf Terlibat</div><div class="stat-value">—</div><div class="stat-sub">—</div></div>
         </div>
       </div>
-
-      <!-- Charts Row 1 -->
+      <!-- Row 1: trend + komponen -->
       <div class="chart-grid g-6-4">
         <div class="chart-card">
           <div class="chart-title">Trend Pengeluaran per Bulan</div>
@@ -420,51 +333,46 @@
         <div class="chart-card">
           <div class="chart-title">Komponen Biaya</div>
           <div class="chart-sub">Klasifikasi item pengeluaran</div>
-          <div class="donut-wrap" style="margin-top:8px">
-            <div class="donut-chart-area" style="width:150px;height:150px;position:relative">
-              <canvas id="pch-komponen" width="150" height="150"></canvas>
+          <div class="donut-wrap" style="margin-top:8px;height:200px">
+            <div style="position:relative;width:140px;height:140px;flex-shrink:0">
+              <canvas id="pch-komponen" width="140" height="140"></canvas>
             </div>
             <div class="donut-legend" id="pch-komponen-legend"></div>
           </div>
         </div>
       </div>
-
-      <!-- Charts Row 2 -->
-      <div class="chart-grid g3" style="margin-top:0">
+      <!-- Row 2: 3 bar charts -->
+      <div class="chart-grid g3">
         <div class="chart-card">
           <div class="chart-title">Per Program/Proyek</div>
           <div class="chart-sub">Total biaya per program</div>
-          <div class="chart-wrap h260"><canvas id="pch-proyek"></canvas></div>
+          <div class="chart-wrap h300"><canvas id="pch-proyek"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Per Staf</div>
           <div class="chart-sub">Total biaya per staf</div>
-          <div class="chart-wrap h260"><canvas id="pch-staf"></canvas></div>
+          <div class="chart-wrap h300"><canvas id="pch-staf"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Per Kode Kegiatan</div>
           <div class="chart-sub">Total biaya per kode RAB</div>
-          <div class="chart-wrap h260"><canvas id="pch-kode"></canvas></div>
+          <div class="chart-wrap h300"><canvas id="pch-kode"></canvas></div>
         </div>
       </div>
-
-      <!-- Charts Row 3 -->
-      <div class="chart-grid g2" style="margin-top:0">
+      <!-- Row 3 -->
+      <div class="chart-grid g2">
         <div class="chart-card">
           <div class="chart-title">Per Nama Kegiatan</div>
-          <div class="chart-sub">Total biaya per kegiatan</div>
-          <div class="chart-wrap h260"><canvas id="pch-kegiatan"></canvas></div>
+          <div class="chart-sub">Total biaya per kegiatan (top 8)</div>
+          <div class="chart-wrap h300"><canvas id="pch-kegiatan"></canvas></div>
         </div>
-        <div class="chart-card" style="display:flex;flex-direction:column;justify-content:space-between">
-          <div>
-            <div class="chart-title">Ringkasan Cepat</div>
-            <div class="chart-sub">Statistik dari data terfilter</div>
-          </div>
-          <div id="pjum-quick-stats" style="display:flex;flex-direction:column;gap:12px;margin-top:12px"></div>
+        <div class="chart-card">
+          <div class="chart-title">Ringkasan Cepat</div>
+          <div class="chart-sub">Statistik dari data terfilter</div>
+          <div id="pjum-quick-stats" style="margin-top:12px"></div>
         </div>
       </div>
-
-      <!-- Data Table -->
+      <!-- Table -->
       <div class="table-card">
         <div class="table-header">
           <h3>Detail Transaksi PJUM</h3>
@@ -489,75 +397,51 @@
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- /page-pjum -->
 
-
-    <!-- ══════════════════════════════════════
-         PAGE: WILAYAH
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ WILAYAH ════════════════════ -->
     <div id="page-wilayah" class="page">
-
       <div class="filter-bar">
-        <div class="fg"><label>Program</label><select id="wf-proyek"><option value="">Semua</option></select></div>
-        <div class="fg"><label>Tahun</label><select id="wf-tahun"><option value="">Semua</option></select></div>
-        <div class="filter-actions">
-          <button class="btn-filter secondary" id="wf-reset">↺ Reset</button>
-        </div>
+        <div class="fg fg-wide"><label>Program</label><select id="wf-proyek"><option value="">Semua</option></select></div>
+        <div class="fg fg-sm"><label>Tahun</label><select id="wf-tahun"><option value="">Semua</option></select></div>
+        <div class="filter-actions"><button class="btn-filter secondary" id="wf-reset">↺ Reset</button></div>
       </div>
-
-      <!-- Stat Cards -->
       <div class="stat-grid g4">
         <div class="stat-card sc-orange">
           <div class="stat-icon-wrap">📍</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Kabupaten</div>
-            <div class="stat-value" id="wstat-kab">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Kabupaten</div><div class="stat-value" id="wstat-kab">—</div></div>
         </div>
         <div class="stat-card sc-blue">
           <div class="stat-icon-wrap">🗺️</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Kecamatan</div>
-            <div class="stat-value" id="wstat-kec">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Kecamatan</div><div class="stat-value" id="wstat-kec">—</div></div>
         </div>
         <div class="stat-card sc-green">
           <div class="stat-icon-wrap">🏘️</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Desa</div>
-            <div class="stat-value" id="wstat-desa">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Desa</div><div class="stat-value" id="wstat-desa">—</div></div>
         </div>
         <div class="stat-card sc-purple">
           <div class="stat-icon-wrap">👥</div>
-          <div class="stat-body">
-            <div class="stat-label">Total Benef</div>
-            <div class="stat-value" id="wstat-tot">—</div>
-          </div>
+          <div class="stat-body"><div class="stat-label">Total Benef</div><div class="stat-value" id="wstat-tot">—</div></div>
         </div>
       </div>
-
-      <!-- Charts -->
       <div class="chart-grid g3">
         <div class="chart-card">
           <div class="chart-title">Per Kabupaten</div>
           <div class="chart-sub">Distribusi benef per kabupaten</div>
-          <div class="chart-wrap h300"><canvas id="wch-kab"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="wch-kab"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Top Kecamatan</div>
           <div class="chart-sub">Kecamatan dengan benef terbanyak</div>
-          <div class="chart-wrap h300"><canvas id="wch-kec"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="wch-kec"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Top 15 Desa</div>
           <div class="chart-sub">Desa/kelurahan terbanyak</div>
-          <div class="chart-wrap h300"><canvas id="wch-desa"></canvas></div>
+          <div class="chart-wrap h340"><canvas id="wch-desa"></canvas></div>
         </div>
       </div>
-
-      <!-- Tabel Desa -->
       <div class="table-card">
         <div class="table-header">
           <h3>Rekap per Desa/Kelurahan</h3>
@@ -580,93 +464,77 @@
           </div>
         </div>
       </div>
+    </div>
 
-    </div><!-- /page-wilayah -->
 
-
-    <!-- ══════════════════════════════════════
-         PAGE: ANALITIK
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ ANALITIK ════════════════════ -->
     <div id="page-analitik" class="page">
-
-      <div class="sec-hd">
-        <div><h2>Analitik Mendalam</h2><p>Cross-analysis antara PJUM dan Beneficiary</p></div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;color:var(--text)">Analitik Mendalam</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Cross-analysis antara PJUM dan Beneficiary</div>
       </div>
-
-      <!-- Chart 1: Stacked cost per program per bulan -->
-      <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-card" style="margin-bottom:14px">
         <div class="chart-title">Biaya PJUM per Program per Bulan</div>
         <div class="chart-sub">Perbandingan pengeluaran antar program dari waktu ke waktu</div>
         <div class="chart-wrap h300"><canvas id="ach-pjum-stacked"></canvas></div>
       </div>
-
-      <!-- Chart 2 & 3 -->
       <div class="chart-grid g2">
         <div class="chart-card">
           <div class="chart-title">Rasio Gender per Program</div>
           <div class="chart-sub">Distribusi laki-laki dan perempuan tiap program</div>
-          <div class="chart-wrap h260"><canvas id="ach-gender-prog"></canvas></div>
+          <div class="chart-wrap h280"><canvas id="ach-gender-prog"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Trend Kategori Benef per Bulan</div>
           <div class="chart-sub">Top 4 kategori dari waktu ke waktu</div>
-          <div class="chart-wrap h260"><canvas id="ach-kategori-trend"></canvas></div>
+          <div class="chart-wrap h280"><canvas id="ach-kategori-trend"></canvas></div>
         </div>
       </div>
-
-      <!-- Chart 4 & 5 -->
-      <div class="chart-grid g-6-4" style="margin-top:0">
+      <div class="chart-grid g-6-4">
         <div class="chart-card">
           <div class="chart-title">Perbandingan Staf: Benef vs Biaya PJUM</div>
           <div class="chart-sub">Jumlah benef dan total biaya PJUM per staf (dual axis)</div>
-          <div class="chart-wrap h260"><canvas id="ach-staf-compare"></canvas></div>
+          <div class="chart-wrap h280"><canvas id="ach-staf-compare"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Komponen Biaya PJUM</div>
           <div class="chart-sub">Proporsi setiap jenis pengeluaran</div>
-          <div class="donut-wrap" style="margin-top:8px;align-items:flex-start">
-            <div class="donut-chart-area" style="width:150px;height:150px;position:relative;flex-shrink:0">
+          <div class="donut-wrap" style="margin-top:8px;flex-direction:column;align-items:center;gap:12px">
+            <div style="position:relative;width:150px;height:150px;flex-shrink:0">
               <canvas id="ach-komponen" width="150" height="150"></canvas>
             </div>
-            <div class="donut-legend" id="ach-komponen-legend"></div>
+            <div class="donut-legend" id="ach-komponen-legend" style="width:100%"></div>
           </div>
         </div>
       </div>
-
-      <!-- Chart 6: Efisiensi -->
-      <div class="chart-card" style="margin-top:0">
+      <div class="chart-card">
         <div class="chart-title">Efisiensi Biaya per Benef (Rp/Orang) per Program</div>
         <div class="chart-sub">Program dengan biaya PJUM paling efisien per penerima manfaat (lebih rendah = lebih efisien)</div>
         <div class="chart-wrap h220"><canvas id="ach-efisiensi"></canvas></div>
       </div>
+    </div>
 
-    </div><!-- /page-analitik -->
 
-
-    <!-- ══════════════════════════════════════
-         PAGE: LAPORAN
-    ══════════════════════════════════════ -->
+    <!-- ════════════════════ LAPORAN ════════════════════ -->
     <div id="page-laporan" class="page">
-
-      <div class="sec-hd">
-        <div><h2>Laporan & Export</h2><p>Ringkasan data untuk pelaporan</p></div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;color:var(--text)">Laporan &amp; Export</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px">Ringkasan data untuk pelaporan</div>
       </div>
-
-      <div class="stat-grid g2" style="margin-bottom:24px">
+      <div class="stat-grid g2" style="margin-bottom:16px">
         <div class="chart-card">
-          <div class="chart-title" style="margin-bottom:16px">Rekap PJUM</div>
+          <div class="chart-title" style="margin-bottom:14px">Rekap PJUM</div>
           <div id="laporan-pjum-rekap"></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title" style="margin-bottom:16px">Rekap Beneficiary</div>
+          <div class="chart-title" style="margin-bottom:14px">Rekap Beneficiary</div>
           <div id="laporan-benef-rekap"></div>
         </div>
       </div>
-
       <div class="chart-card">
-        <div class="chart-title" style="margin-bottom:16px">Rekap per Program (PJUM + Benef)</div>
+        <div class="chart-title" style="margin-bottom:14px">Rekap per Program (PJUM + Benef)</div>
         <div class="tbl-scroll">
-          <table class="data-table" id="laporan-prog-tbl">
+          <table class="data-table">
             <thead><tr>
               <th>#</th><th>Program</th>
               <th class="num">Total Biaya PJUM</th><th class="num">Transaksi</th>
@@ -677,13 +545,11 @@
           </table>
         </div>
       </div>
-
-    </div><!-- /page-laporan -->
+    </div>
 
   </main>
-</div><!-- /app-layout -->
+</div>
 
-<!-- Scripts -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/charts.js"></script>
@@ -692,8 +558,5 @@
 <script src="js/pjum.js"></script>
 <script src="js/pages.js"></script>
 <script src="js/app.js"></script>
-
-
-
 </body>
 </html>
