@@ -2,34 +2,35 @@
    utils.js — Shared helpers
 ═══════════════════════════════════════════════ */
 
-/* Get value from select/input */
-window.v = id => {
-  const el = document.getElementById(id);
+window.v = function(id) {
+  var el = document.getElementById(id);
   return el ? el.value.trim() : '';
 };
 
-/* Populate a <select> — keeps existing value if still valid */
-window.populateSel = (id, values, labelFn) => {
-  const el = document.getElementById(id);
+window.populateSel = function(id, values, labelFn) {
+  var el = document.getElementById(id);
   if (!el) return;
-  const cur = el.value;
+  var cur = el.value;
   el.innerHTML = '<option value="">Semua</option>' +
-    values.map(val => `<option value="${val}">${labelFn ? labelFn(val) : val}</option>`).join('');
-  if (cur && [...el.options].some(o => o.value === cur)) el.value = cur;
+    values.map(function(val) {
+      return '<option value="' + val + '">' + (labelFn ? labelFn(val) : val) + '</option>';
+    }).join('');
+  if (cur) {
+    var opts = Array.from(el.options);
+    if (opts.some(function(o) { return o.value === cur; })) el.value = cur;
+  }
 };
 
-/* Set innerHTML safely */
-window.setEl = (id, html) => {
-  const el = document.getElementById(id);
+window.setEl = function(id, html) {
+  var el = document.getElementById(id);
   if (el) el.innerHTML = html;
 };
 
-/* Set stat card value + sub text */
-window.setCard = (id, value, sub) => {
-  const el = document.getElementById(id);
+window.setCard = function(id, value, sub) {
+  var el = document.getElementById(id);
   if (!el) return;
-  const valEl = el.querySelector('.stat-value');
-  const subEl = el.querySelector('.stat-sub');
+  var valEl = el.querySelector('.stat-value');
+  var subEl = el.querySelector('.stat-sub');
   if (valEl) valEl.innerHTML = value;
   if (subEl) subEl.innerHTML = sub || '';
 };
