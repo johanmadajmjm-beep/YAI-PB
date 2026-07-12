@@ -73,20 +73,78 @@ function buildAll() {
   if (al) al.style.display = 'flex';
 }
 
-/* Dashboard filter helpers (defined here so they're global) */
+/* Dashboard filter helpers */
 function populateDashFilters() {
+  var pjum  = window.rawPjum;
   var benef = window.rawBenef;
-  var B = window.B;
-  populateSel('dash-kab',   uniqArr(benef.map(function(r){return r[B.kab];})));
-  populateSel('dash-kec',   uniqArr(benef.map(function(r){return r[B.kec];})));
-  populateSel('dash-desa',  uniqArr(benef.map(function(r){return r[B.desa];})));
-  populateSel('dash-jenis', uniqArr(benef.map(function(r){return r[B.kategori];})));
-  populateSel('dash-tahun', uniqArr(benef.map(function(r){return r[B.tgl]?r[B.tgl].slice(0,4):null;}).filter(Boolean)).reverse());
+  var P = window.P, B = window.B;
+
+  // Program: gabungan dari PJUM dan Benef
+  var allProg = uniqArr(
+    pjum.map(function(r){return r[P.proyek];}).concat(
+    benef.map(function(r){return r[B.proyek];}))
+  );
+  populateSel('dash-proyek', allProg);
+
+  // Staf: gabungan dari PJUM dan Benef
+  var allStaf = uniqArr(
+    pjum.map(function(r){return r[P.staf];}).concat(
+    benef.map(function(r){return r[B.staf];}))
+  );
+  populateSel('dash-staf', allStaf);
+
+  // Tahun: gabungan
+  var allTahun = uniqArr(
+    pjum.map(function(r){return r[P.tgl]?r[P.tgl].slice(0,4):null;}).filter(Boolean).concat(
+    benef.map(function(r){return r[B.tgl]?r[B.tgl].slice(0,4):null;}).filter(Boolean))
+  ).reverse();
+  populateSel('dash-tahun', allTahun);
+
+  // Bulan
+  populateSel('dash-bulan',
+    ['01','02','03','04','05','06','07','08','09','10','11','12'],
+    bulanName
+  );
+
+  // Attach listener sekali saja (cek flag)
+  if (!window._dashFilterAttached) {
+    ['dash-proyek','dash-staf','dash-tahun','dash-bulan'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('change', applyDashFilter);
+    });
+    window._dashFilterAttached = true;
+  }
+}
+
+function getDashFiltered() {
+  var proyek = v('dash-proyek');
+  var staf   = v('dash-staf');
+  var tahun  = v('dash-tahun');
+  var bulan  = v('dash-bulan');
+  var P = window.P, B = window.B;
+
+  var filteredBenef = window.rawBenef.filter(function(r) {
+    if (proyek && r[B.proyek] !== proyek) return false;
+    if (staf   && r[B.staf]  !== staf)   return false;
+    if (tahun  && !(r[B.tgl]||'').startsWith(tahun)) return false;
+    if (bulan  && (r[B.tgl]||'').slice(5,7) !== bulan) return false;
+    return true;
+  });
+
+  var filteredPjum = window.rawPjum.filter(function(r) {
+    if (proyek && r[P.proyek] !== proyek) return false;
+    if (staf   && r[P.staf]  !== staf)   return false;
+    if (tahun  && !(r[P.tgl]||'').startsWith(tahun)) return false;
+    if (bulan  && (r[P.tgl]||'').slice(5,7) !== bulan) return false;
+    return true;
+  });
+
+  return { benef: filteredBenef, pjum: filteredPjum };
 }
 
 function applyDashFilter() { buildDashboard(); }
 function resetDashFilter() {
-  ['dash-tahun','dash-kab','dash-kec','dash-desa','dash-jenis'].forEach(function(id) {
+  ['dash-proyek','dash-staf','dash-tahun','dash-bulan'].forEach(function(id) {
     var el = document.getElementById(id); if(el) el.value = '';
   });
   buildDashboard();
