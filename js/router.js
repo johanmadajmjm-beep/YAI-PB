@@ -9,6 +9,8 @@ const Router = (function() {
 
     let currentPage = 'dashboard';
     let isLoaded = false;
+    let retryCount = 0;
+    const MAX_RETRY = 10;
 
     /**
      * Load halaman berdasarkan menu
@@ -40,12 +42,14 @@ const Router = (function() {
             .then(html => {
                 container.innerHTML = html;
                 isLoaded = true;
-
-                // Inisialisasi halaman setelah konten dimuat
-                initPage(page);
+                retryCount = 0;
 
                 // Update active class di navbar
                 updateNavActive(page);
+
+                // Inisialisasi halaman setelah konten dimuat
+                // TAPI tunggu data siap
+                waitForDataAndInit(page);
             })
             .catch(error => {
                 console.error('[Router] Error loading page:', error);
@@ -62,10 +66,51 @@ const Router = (function() {
     }
 
     /**
+     * Tunggu data siap, baru init halaman
+     */
+    function waitForDataAndInit(page) {
+        const data = window._dashboardData?.currentData || null;
+
+        if (data && !data.error) {
+            // Data sudah siap, langsung init
+            initPage(page, data);
+            return;
+        }
+
+        // Data belum siap, coba tunggu
+        if (retryCount < MAX_RETRY) {
+            retryCount++;
+            console.log(`[Router] Menunggu data... (percobaan ${retryCount}/${MAX_RETRY})`);
+            setTimeout(() => {
+                waitForDataAndInit(page);
+            }, 300);
+        } else {
+            console.error('[Router] Data tidak tersedia setelah menunggu.');
+            // Coba tampilkan error di halaman
+            const container = document.getElementById('pageContent');
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:60px 20px;color:var(--danger);">
+                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                        <h3 style="margin:16px 0;">Data Tidak Tersedia</h3>
+                        <p>Gagal memuat data dari server. Periksa koneksi atau refresh halaman.</p>
+                        <button onclick="location.reload()" style="margin-top:16px;padding:8px 24px;border:none;border-radius:8px;background:var(--accent);color:white;cursor:pointer;">
+                            <i class="fas fa-sync"></i> Muat Ulang
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    /**
      * Inisialisasi konten per halaman
      */
-    function initPage(page) {
-        const data = window._dashboardData?.currentData || null;
+    function initPage(page, data) {
+        if (!data) {
+            console.warn('[Router] No data for page:', page);
+            return;
+        }
 
         switch (page) {
             case 'dashboard':
@@ -106,10 +151,12 @@ const Router = (function() {
             return;
         }
 
-        // Filter bar dashboard sudah ada di HTML
         // Tampilkan filter bar dashboard
         const filterBar = document.getElementById('filterBarDashboard');
         if (filterBar) filterBar.style.display = 'flex';
+
+        // Sembunyikan filter bar lainnya
+        hideFilterBars(['filterBarBenef', 'filterBarPjum']);
 
         // Render metrik & chart
         if (typeof Metrics !== 'undefined') {
@@ -139,12 +186,11 @@ const Router = (function() {
         }
 
         // Sembunyikan filter bar dashboard
-        const filterBarDash = document.getElementById('filterBarDashboard');
-        if (filterBarDash) filterBarDash.style.display = 'none';
+        hideFilterBars(['filterBarDashboard', 'filterBarPjum']);
 
         // Tampilkan filter bar benef
-        const filterBarBenef = document.getElementById('filterBarBenef');
-        if (filterBarBenef) filterBarBenef.style.display = 'flex';
+        const filterBar = document.getElementById('filterBarBenef');
+        if (filterBar) filterBar.style.display = 'flex';
 
         // Render halaman Beneficiary
         if (typeof Pages !== 'undefined') {
@@ -165,12 +211,11 @@ const Router = (function() {
         }
 
         // Sembunyikan filter bar dashboard
-        const filterBarDash = document.getElementById('filterBarDashboard');
-        if (filterBarDash) filterBarDash.style.display = 'none';
+        hideFilterBars(['filterBarDashboard', 'filterBarBenef']);
 
         // Tampilkan filter bar pjum
-        const filterBarPjum = document.getElementById('filterBarPjum');
-        if (filterBarPjum) filterBarPjum.style.display = 'flex';
+        const filterBar = document.getElementById('filterBarPjum');
+        if (filterBar) filterBar.style.display = 'flex';
 
         // Render halaman PJUM
         if (typeof Pages !== 'undefined') {
@@ -203,18 +248,7 @@ const Router = (function() {
      */
     function initAnalitik() {
         hideAllFilterBars();
-        const container = document.getElementById('pageContent');
-        if (container) {
-            // Jika belum ada konten, tambahkan placeholder
-            if (!container.querySelector('.placeholder-content')) {
-                container.innerHTML = `
-                    <div class="placeholder-content">
-                        <h2><i class="fas fa-chart-line"></i> Analitik Lanjutan</h2>
-                        <p>Analitik detail akan ditampilkan di sini.</p>
-                    </div>
-                `;
-            }
-        }
+        // Konten sudah di-load dari HTML
     }
 
     /**
@@ -222,17 +256,7 @@ const Router = (function() {
      */
     function initData() {
         hideAllFilterBars();
-        const container = document.getElementById('pageContent');
-        if (container) {
-            if (!container.querySelector('.placeholder-content')) {
-                container.innerHTML = `
-                    <div class="placeholder-content">
-                        <h2><i class="fas fa-database"></i> Data Mentah</h2>
-                        <p>Data mentah dari database akan ditampilkan di sini.</p>
-                    </div>
-                `;
-            }
-        }
+        // Konten sudah di-load dari HTML
     }
 
     /**
@@ -240,17 +264,7 @@ const Router = (function() {
      */
     function initLaporan() {
         hideAllFilterBars();
-        const container = document.getElementById('pageContent');
-        if (container) {
-            if (!container.querySelector('.placeholder-content')) {
-                container.innerHTML = `
-                    <div class="placeholder-content">
-                        <h2><i class="fas fa-file-alt"></i> Laporan</h2>
-                        <p>Generate laporan akan tersedia di sini.</p>
-                    </div>
-                `;
-            }
-        }
+        // Konten sudah di-load dari HTML
     }
 
     /**
@@ -258,17 +272,21 @@ const Router = (function() {
      */
     function initPengaturan() {
         hideAllFilterBars();
-        const container = document.getElementById('pageContent');
-        if (container) {
-            if (!container.querySelector('.placeholder-content')) {
-                container.innerHTML = `
-                    <div class="placeholder-content">
-                        <h2><i class="fas fa-cog"></i> Pengaturan</h2>
-                        <p>Pengaturan dashboard akan ditampilkan di sini.</p>
-                    </div>
-                `;
-            }
+        // Konten sudah di-load dari HTML dengan script inline-nya
+        // Panggil initPengaturanPage jika ada
+        if (typeof window.initPengaturanPage === 'function') {
+            window.initPengaturanPage();
         }
+    }
+
+    /**
+     * Sembunyikan filter bar tertentu
+     */
+    function hideFilterBars(ids) {
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
     }
 
     /**
@@ -380,14 +398,6 @@ const Router = (function() {
     return {
         loadPage,
         getCurrentPage,
-        initDashboard,
-        initBeneficiary,
-        initPjum,
-        initWilayah,
-        initAnalitik,
-        initData,
-        initLaporan,
-        initPengaturan,
     };
 
 })();

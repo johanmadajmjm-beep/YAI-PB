@@ -15,12 +15,15 @@
         filteredData: null,
         loading: false,
         error: null,
-        currentTab: 'dashboard'
+        currentTab: 'dashboard',
+        isReady: false,
     };
 
     window._dashboardData = {
         currentData: null,
         updateDashboard: updateDashboard,
+        getData: function() { return state.data; },
+        isReady: function() { return state.isReady; },
     };
 
     /**
@@ -33,19 +36,29 @@
         setupModal();
         setupDetailButton();
 
+        // Tunggu data selesai di-load
         await loadData();
 
-        if (state.data) {
-            // Inisialisasi filter untuk semua tab
-            Filters.initFilters(state.data);
-        }
+        // Data sudah siap, baru load halaman default
+        if (state.data && !state.data.error) {
+            state.isReady = true;
+            window._dashboardData.currentData = state.data;
 
-        // Load halaman default (dashboard)
-        if (typeof Router !== 'undefined') {
-            Router.loadPage('dashboard');
-        }
+            // Inisialisasi filter untuk semua tab (hanya populate select)
+            if (typeof Filters !== 'undefined') {
+                Filters.initFilters(state.data);
+            }
 
-        console.log('[Dashboard] Ready.');
+            // Load halaman dashboard
+            if (typeof Router !== 'undefined') {
+                Router.loadPage('dashboard');
+            }
+
+            console.log('[Dashboard] Ready.');
+        } else {
+            console.error('[Dashboard] Data gagal dimuat, coba refresh.');
+            showError('Data gagal dimuat. Periksa koneksi atau URL GAS.');
+        }
     }
 
     /**
@@ -60,12 +73,14 @@
         try {
             const data = await API.getAdminData();
 
-            console.log('[Dashboard] Data received:', data);
+            console.log('[Dashboard] Data received:', data ? 'YES' : 'NO');
 
             // Cek Chart.js
             if (typeof Chart === 'undefined') {
                 console.error('[Dashboard] Chart.js tidak terload!');
                 showError('Chart.js tidak terload. Periksa koneksi internet.');
+                state.loading = false;
+                showLoading(false);
                 return;
             }
 
@@ -73,10 +88,6 @@
                 state.data = data;
                 state.filteredData = data;
                 window._dashboardData.currentData = data;
-
-                // Filter diinisialisasi di main.js via Filters.initFilters()
-                // Yang akan memanggil populateSelect untuk semua filter
-
             } else {
                 throw new Error(data?.error || 'Data tidak valid');
             }
@@ -129,6 +140,10 @@
                 if (typeof Router !== 'undefined') {
                     Router.loadPage(page);
                 }
+
+                // Update active class
+                navLinks.forEach(l => l.classList.remove('active'));
+                this.classList.add('active');
             });
         });
     }
@@ -280,6 +295,20 @@
                 <p style="font-size:13px;color:var(--gray-400);margin-top:8px;">
                     Periksa koneksi internet atau URL GAS Anda.
                 </p>
+            `;
+        }
+        // Tampilkan di halaman juga
+        const container = document.getElementById('pageContent');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align:center;padding:60px 20px;color:var(--danger);">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    <h3 style="margin:16px 0;">Gagal Memuat Data</h3>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" style="margin-top:16px;padding:8px 24px;border:none;border-radius:8px;background:var(--accent);color:white;cursor:pointer;">
+                        <i class="fas fa-sync"></i> Muat Ulang
+                    </button>
+                </div>
             `;
         }
     }
