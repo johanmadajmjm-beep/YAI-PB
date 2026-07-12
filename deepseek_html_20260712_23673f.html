@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Executive Dashboard — Yayasan Ayo Indonesia</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+    <div class="app">
+
+        <!-- ====== SIDEBAR / NAVBAR ====== -->
+        <nav class="navbar">
+            <div class="brand">
+                <i class="fas fa-chart-pie"></i>
+                <span>Executive Dashboard</span>
+            </div>
+            <ul class="nav-links" id="navLinks">
+                <li class="active" data-page="dashboard"><i class="fas fa-th-large"></i> Dashboard</li>
+                <li data-page="beneficiary"><i class="fas fa-users"></i> Beneficiary</li>
+                <li data-page="pjum"><i class="fas fa-file-invoice"></i> PJUM</li>
+                <li data-page="wilayah"><i class="fas fa-map-marker-alt"></i> Wilayah</li>
+                <li data-page="analitik"><i class="fas fa-chart-line"></i> Analitik</li>
+                <li data-page="data"><i class="fas fa-database"></i> Data</li>
+                <li data-page="laporan"><i class="fas fa-file-alt"></i> Laporan</li>
+                <li data-page="pengaturan"><i class="fas fa-cog"></i> Pengaturan</li>
+            </ul>
+        </nav>
+
+        <!-- ====== MAIN CONTENT ====== -->
+        <main class="main-content">
+
+            <!-- ====== HALAMAN DASHBOARD ====== -->
+            <section id="page-dashboard" class="page active">
+
+                <!-- METRIK -->
+                <div class="metric-grid" id="metricGrid">
+                    <div class="metric-card">
+                        <div class="label">Total Beneficiary</div>
+                        <div class="value" id="totalBenef">0</div>
+                        <span class="change" id="benefChange">↑ 0%</span>
+                        <span class="sub">dari periode sebelumnya</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total PJUM</div>
+                        <div class="value" id="totalPjum">0</div>
+                        <span class="change" id="pjumChange">↑ 0%</span>
+                        <span class="sub">dari periode sebelumnya</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Desa</div>
+                        <div class="value" id="totalDesa">0</div>
+                        <span class="sub" id="totalKab"></span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="label">Total Biaya</div>
+                        <div class="value" id="totalBiaya">Rp0</div>
+                        <span class="change" id="biayaChange">↑ 0%</span>
+                        <span class="sub">dari periode sebelumnya</span>
+                    </div>
+                </div>
+
+                <!-- FILTER -->
+                <div class="filter-bar" id="filterBar">
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar"></i> Bulan</label>
+                        <select id="filterBulan"><option value="all">Semua Bulan</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-calendar-alt"></i> Tahun</label>
+                        <select id="filterTahun"><option value="all">Semua Tahun</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-users"></i> Staf</label>
+                        <select id="filterStaf"><option value="all">Semua Staf</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label><i class="fas fa-project-diagram"></i> Program</label>
+                        <select id="filterProgram"><option value="all">Semua Program</option></select>
+                    </div>
+                    <button class="btn-filter" id="applyFilter"><i class="fas fa-filter"></i> Terapkan</button>
+                    <button class="btn-filter btn-reset" id="resetFilter"><i class="fas fa-undo"></i> Reset</button>
+                </div>
+
+                <!-- GRAFIK ROW 1 -->
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-chart-line"></i> Trend Beneficiary per Bulan</h3>
+                        <div class="chart-wrapper"><canvas id="trendChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-chart-pie"></i> Distribusi Jenis Beneficiary</h3>
+                        <div class="chart-wrapper"><canvas id="distribusiChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- GRAFIK ROW 2 -->
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-map-marked-alt"></i> Beneficiary per Desa</h3>
+                        <div class="chart-wrapper"><canvas id="desaChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><i class="fas fa-money-bill-wave"></i> Pengeluaran PJUM per Bulan</h3>
+                        <div class="chart-wrapper"><canvas id="pengeluaranChart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- TOP 5 + AI INSIGHT -->
+                <div class="bottom-grid">
+                    <div class="chart-card">
+                        <h3><i class="fas fa-trophy"></i> Top 5 Jenis Kegiatan (dari Beneficiary)</h3>
+                        <ul class="top5-list" id="top5List">
+                            <li><span>1. Pelatihan</span><span class="badge">42.8%</span></li>
+                            <li><span>2. Workshop</span><span class="badge">18.6%</span></li>
+                            <li><span>3. Home Visit</span><span class="badge">12.3%</span></li>
+                            <li><span>4. Pendampingan</span><span class="badge">10.6%</span></li>
+                            <li><span>5. Advokasi</span><span class="badge">5.2%</span></li>
+                        </ul>
+                    </div>
+                    <div class="chart-card insight-card">
+                        <h3><i class="fas fa-robot"></i> AI Insight</h3>
+                        <div class="insight-text" id="insightText">
+                            <p>Memuat data...</p>
+                        </div>
+                        <button class="btn-detail" id="btnDetailAnalitik">
+                            <i class="fas fa-arrow-right"></i> Lihat Detail Analitik
+                        </button>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ====== HALAMAN LAIN (Placeholder) ====== -->
+            <section id="page-beneficiary" class="page">
+                <h2><i class="fas fa-users"></i> Data Beneficiary</h2>
+                <div class="placeholder-content">
+                    <p><i class="fas fa-spinner fa-spin"></i> Memuat data...</p>
+                    <div id="benefTableContainer"></div>
+                </div>
+            </section>
+
+            <section id="page-pjum" class="page">
+                <h2><i class="fas fa-file-invoice"></i> Data PJUM</h2>
+                <div class="placeholder-content">
+                    <p><i class="fas fa-spinner fa-spin"></i> Memuat data...</p>
+                    <div id="pjumTableContainer"></div>
+                </div>
+            </section>
+
+            <section id="page-wilayah" class="page">
+                <h2><i class="fas fa-map-marker-alt"></i> Data Wilayah</h2>
+                <div class="placeholder-content">
+                    <p>Data wilayah akan ditampilkan di sini.</p>
+                    <div id="wilayahContainer"></div>
+                </div>
+            </section>
+
+            <section id="page-analitik" class="page">
+                <h2><i class="fas fa-chart-line"></i> Analitik Lanjutan</h2>
+                <div class="placeholder-content">
+                    <p>Analitik detail akan ditampilkan di sini.</p>
+                </div>
+            </section>
+
+            <section id="page-data" class="page">
+                <h2><i class="fas fa-database"></i> Data Mentah</h2>
+                <div class="placeholder-content">
+                    <p>Data mentah dari database akan ditampilkan di sini.</p>
+                </div>
+            </section>
+
+            <section id="page-laporan" class="page">
+                <h2><i class="fas fa-file-alt"></i> Laporan</h2>
+                <div class="placeholder-content">
+                    <p>Generate laporan akan tersedia di sini.</p>
+                </div>
+            </section>
+
+            <section id="page-pengaturan" class="page">
+                <h2><i class="fas fa-cog"></i> Pengaturan</h2>
+                <div class="placeholder-content">
+                    <p>Pengaturan dashboard akan ditampilkan di sini.</p>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ====== MODAL DETAIL ====== -->
+        <div class="modal-overlay" id="detailModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Detail Analitik</h3>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <p>Memuat data...</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ====== JS ====== -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/metrics.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/filters.js"></script>
+    <script src="js/insights.js"></script>
+    <script src="js/tables.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+</html>
