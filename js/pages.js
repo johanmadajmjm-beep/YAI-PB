@@ -9,56 +9,56 @@ const Pages = (function() {
 
     let chartInstances = {};
 
-    /**
-     * Render halaman Beneficiary
-     */
     function renderBeneficiaryPage(data) {
         if (!data) return;
 
         const benef = data.benef || {};
 
-        // ---- Ringkasan ----
-        document.getElementById('benefPageTotal').textContent = (benef.total || 0).toLocaleString('id-ID');
-        document.getElementById('benefPageUnique').textContent = (benef.uniqueCount || 0).toLocaleString('id-ID');
-        document.getElementById('benefPageDesa').textContent = Object.keys(benef.byDesa || {}).length.toLocaleString('id-ID');
-        document.getElementById('benefPageProgram').textContent = Object.keys(benef.byProyek || {}).length.toLocaleString('id-ID');
+        const elTotal = document.getElementById('benefPageTotal');
+        if (elTotal) elTotal.textContent = (benef.total || 0).toLocaleString('id-ID');
 
-        // ---- Grafik ----
+        const elUnique = document.getElementById('benefPageUnique');
+        if (elUnique) elUnique.textContent = (benef.uniqueCount || 0).toLocaleString('id-ID');
+
+        const elDesa = document.getElementById('benefPageDesa');
+        if (elDesa) elDesa.textContent = Object.keys(benef.byDesa || {}).length.toLocaleString('id-ID');
+
+        const elProgram = document.getElementById('benefPageProgram');
+        if (elProgram) elProgram.textContent = Object.keys(benef.byProyek || {}).length.toLocaleString('id-ID');
+
         renderBenefTrend(benef);
         renderBenefDistribusi(benef);
         renderBenefDesa(benef);
         renderBenefTop5(benef);
     }
 
-    /**
-     * Render halaman PJUM
-     */
     function renderPjumPage(data) {
         if (!data) return;
 
         const pjum = data.pjum || {};
 
-        // ---- Ringkasan ----
-        document.getElementById('pjumPageTotal').textContent = Metrics.formatRupiah(pjum.totalCost || 0);
-        document.getElementById('pjumPageFile').textContent = (pjum.fileCount || 0).toLocaleString('id-ID');
-        document.getElementById('pjumPageProyek').textContent = Object.keys(pjum.byProyek || {}).length.toLocaleString('id-ID');
-        document.getElementById('pjumPageStaf').textContent = Object.keys(pjum.byStaf || {}).length.toLocaleString('id-ID');
+        const elTotal = document.getElementById('pjumPageTotal');
+        if (elTotal) elTotal.textContent = Metrics.formatRupiah(pjum.totalCost || 0);
 
-        // ---- Grafik ----
+        const elFile = document.getElementById('pjumPageFile');
+        if (elFile) elFile.textContent = (pjum.fileCount || 0).toLocaleString('id-ID');
+
+        const elProyek = document.getElementById('pjumPageProyek');
+        if (elProyek) elProyek.textContent = Object.keys(pjum.byProyek || {}).length.toLocaleString('id-ID');
+
+        const elStaf = document.getElementById('pjumPageStaf');
+        if (elStaf) elStaf.textContent = Object.keys(pjum.byStaf || {}).length.toLocaleString('id-ID');
+
         renderPjumPengeluaran(pjum);
         renderPjumKomponen(pjum);
         renderPjumTopProyek(pjum);
         renderPjumTopStaf(pjum);
     }
 
-    /**
-     * Render Trend Beneficiary di halaman Beneficiary
-     */
     function renderBenefTrend(benef) {
         const ctx = document.getElementById('benefTrendChart');
         if (!ctx) return;
 
-        // Hapus chart lama jika ada
         if (chartInstances.benefTrend) {
             chartInstances.benefTrend.destroy();
             delete chartInstances.benefTrend;
@@ -70,19 +70,14 @@ const Pages = (function() {
             return;
         }
 
-        // Filter tahun valid (2020-2026)
         const validYears = ['2020','2021','2022','2023','2024','2025','2026'];
         const filtered = {};
         Object.keys(byBulan).forEach(key => {
             const year = key.substring(0,4);
-            if (validYears.includes(year)) {
-                filtered[key] = byBulan[key];
-            }
+            if (validYears.includes(year)) filtered[key] = byBulan[key];
         });
 
         const sorted = Object.keys(filtered).sort();
-        
-        // Jika setelah filter tidak ada data
         if (sorted.length === 0) {
             showEmptyState(ctx, 'Tidak ada data trend (tahun 2020-2026)');
             return;
@@ -129,9 +124,6 @@ const Pages = (function() {
         });
     }
 
-    /**
-     * Render Distribusi Jenis Beneficiary di halaman Beneficiary
-     */
     function renderBenefDistribusi(benef) {
         const ctx = document.getElementById('benefDistribusiChart');
         if (!ctx) return;
@@ -177,9 +169,6 @@ const Pages = (function() {
         });
     }
 
-    /**
-     * Render Beneficiary per Desa (Top 10) di halaman Beneficiary
-     */
     function renderBenefDesa(benef) {
         const ctx = document.getElementById('benefDesaChart');
         if (!ctx) return;
@@ -230,9 +219,6 @@ const Pages = (function() {
         });
     }
 
-    /**
-     * Top 5 Kegiatan Beneficiary
-     */
     function renderBenefTop5(benef) {
         const container = document.getElementById('benefTop5List');
         if (!container) return;
@@ -255,9 +241,6 @@ const Pages = (function() {
         }).join('');
     }
 
-    /**
-     * Render Pengeluaran PJUM per Bulan di halaman PJUM
-     */
     function renderPjumPengeluaran(pjum) {
         const ctx = document.getElementById('pjumPengeluaranChart');
         if (!ctx) return;
@@ -273,18 +256,14 @@ const Pages = (function() {
             return;
         }
 
-        // Filter tahun valid (2020-2026)
         const validYears = ['2020','2021','2022','2023','2024','2025','2026'];
         const filtered = {};
         Object.keys(byBulan).forEach(key => {
             const year = key.substring(0,4);
-            if (validYears.includes(year)) {
-                filtered[key] = byBulan[key];
-            }
+            if (validYears.includes(year)) filtered[key] = byBulan[key];
         });
 
         const sorted = Object.keys(filtered).sort();
-        
         if (sorted.length === 0) {
             showEmptyState(ctx, 'Tidak ada data pengeluaran (tahun 2020-2026)');
             return;
@@ -348,9 +327,6 @@ const Pages = (function() {
         });
     }
 
-    /**
-     * Render Distribusi Biaya per Komponen di halaman PJUM
-     */
     function renderPjumKomponen(pjum) {
         const ctx = document.getElementById('pjumKomponenChart');
         if (!ctx) return;
@@ -396,9 +372,6 @@ const Pages = (function() {
         });
     }
 
-    /**
-     * Top 5 Proyek dengan Biaya Tertinggi
-     */
     function renderPjumTopProyek(pjum) {
         const container = document.getElementById('pjumTopProyekList');
         if (!container) return;
@@ -419,9 +392,6 @@ const Pages = (function() {
         }).join('');
     }
 
-    /**
-     * Top 5 Staf dengan Biaya Tertinggi
-     */
     function renderPjumTopStaf(pjum) {
         const container = document.getElementById('pjumTopStafList');
         if (!container) return;
@@ -442,9 +412,6 @@ const Pages = (function() {
         }).join('');
     }
 
-    /**
-     * Show empty state di canvas
-     */
     function showEmptyState(ctx, message) {
         const parent = ctx.parentElement;
         if (parent) {
@@ -455,9 +422,6 @@ const Pages = (function() {
         }
     }
 
-    /**
-     * Destroy semua chart
-     */
     function destroyAll() {
         Object.keys(chartInstances).forEach(key => {
             if (chartInstances[key]) {
@@ -467,7 +431,6 @@ const Pages = (function() {
         });
     }
 
-    // Public API
     return {
         renderBeneficiaryPage,
         renderPjumPage,
@@ -476,7 +439,6 @@ const Pages = (function() {
 
 })();
 
-// Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = Pages;
 }

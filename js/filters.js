@@ -22,34 +22,29 @@ const Filters = (function() {
     function extractMonth(dateStr) {
         if (!dateStr || dateStr === '—' || dateStr === '') return null;
         
-        // Coba parse berbagai format
         let parsed = parseDate(dateStr);
         if (parsed) {
             const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
             return monthNames[parsed.getMonth()];
         }
         
-        // Fallback: coba regex
         const patterns = [
-            /^(\d{4})-(\d{2})-(\d{2})/,      // YYYY-MM-DD
-            /^(\d{2})\/(\d{2})\/(\d{4})/,    // DD/MM/YYYY
-            /^(\d{2})-(\d{2})-(\d{4})/,      // DD-MM-YYYY
-            /^(\d{4})\/(\d{2})\/(\d{2})/,    // YYYY/MM/DD
+            /^(\d{4})-(\d{2})-(\d{2})/,
+            /^(\d{2})\/(\d{2})\/(\d{4})/,
+            /^(\d{2})-(\d{2})-(\d{4})/,
+            /^(\d{4})\/(\d{2})\/(\d{2})/,
         ];
         
         for (let p of patterns) {
             const match = dateStr.match(p);
             if (match) {
-                // Coba deteksi format
                 if (match[1].length === 4) {
-                    // YYYY-MM-DD atau YYYY/MM/DD
                     const month = parseInt(match[2]);
                     if (month >= 1 && month <= 12) {
                         const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
                         return monthNames[month - 1];
                     }
                 } else if (match[3] && match[3].length === 4) {
-                    // DD/MM/YYYY atau DD-MM-YYYY
                     const month = parseInt(match[2]);
                     if (month >= 1 && month <= 12) {
                         const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -65,13 +60,11 @@ const Filters = (function() {
     function extractYear(dateStr) {
         if (!dateStr || dateStr === '—' || dateStr === '') return null;
         
-        // Coba parse berbagai format
         let parsed = parseDate(dateStr);
         if (parsed) {
             return parsed.getFullYear().toString();
         }
         
-        // Fallback: cari angka 4 digit yang masuk akal (1900-2099)
         const match = dateStr.match(/\b(19|20)\d{2}\b/);
         if (match) {
             const year = parseInt(match[0]);
@@ -86,22 +79,19 @@ const Filters = (function() {
     function parseDate(dateStr) {
         if (!dateStr || dateStr === '—' || dateStr === '') return null;
         
-        // Coba Date.parse
         const d = new Date(dateStr);
         if (!isNaN(d.getTime())) {
-            // Cek apakah tahun masuk akal (1900-2099)
             const year = d.getFullYear();
             if (year >= 1900 && year <= 2099) {
                 return d;
             }
         }
         
-        // Coba berbagai format
         const patterns = [
-            /^(\d{4})-(\d{2})-(\d{2})/,      // YYYY-MM-DD
-            /^(\d{2})\/(\d{2})\/(\d{4})/,    // DD/MM/YYYY
-            /^(\d{2})-(\d{2})-(\d{4})/,      // DD-MM-YYYY
-            /^(\d{4})\/(\d{2})\/(\d{2})/,    // YYYY/MM/DD
+            /^(\d{4})-(\d{2})-(\d{2})/,
+            /^(\d{2})\/(\d{2})\/(\d{4})/,
+            /^(\d{2})-(\d{2})-(\d{4})/,
+            /^(\d{4})\/(\d{2})\/(\d{2})/,
         ];
         
         for (let p of patterns) {
@@ -143,37 +133,27 @@ const Filters = (function() {
         const benef = data.benef || {};
         const pjum = data.pjum || {};
 
-        // ---- INISIALISASI: Dashboard ----
         initDashboardFilters(benef, pjum);
-
-        // ---- INISIALISASI: Beneficiary ----
         initBenefFilters(benef);
-
-        // ---- INISIALISASI: PJUM ----
         initPjumFilters(pjum);
-
-        // ---- EVENT LISTENER ----
         setupEventListeners();
     }
 
     // ============================================================
-    // DASHBOARD FILTERS (Gabungan BENEF + PJUM)
+    // DASHBOARD FILTERS
     // ============================================================
 
     function initDashboardFilters(benef, pjum) {
-        // Program: gabungan dari benef.byProyek + pjum.byProyek
         const programSet = new Set();
         Object.keys(benef.byProyek || {}).forEach(p => programSet.add(p));
         Object.keys(pjum.byProyek || {}).forEach(p => programSet.add(p));
         populateSelect('filterProgram', programSet, 'Semua Program');
 
-        // Staf: gabungan dari benef.byStaf + pjum.byStaf
         const stafSet = new Set();
         Object.keys(benef.byStaf || {}).forEach(s => stafSet.add(s));
         Object.keys(pjum.byStaf || {}).forEach(s => stafSet.add(s));
         populateSelect('filterStaf', stafSet, 'Semua Staf');
 
-        // Bulan: gabungan dari semua tanggal
         const bulanSet = new Set();
         const benefRows = benef.daftar || [];
         const pjumRows = pjum.daftar || [];
@@ -185,13 +165,11 @@ const Filters = (function() {
             const m = extractMonth(r.tanggal);
             if (m) bulanSet.add(m);
         });
-        // Tambahkan "Blank"
         const hasBlankBenef = benefRows.some(r => !isValidDate(r.tanggal));
         const hasBlankPjum = pjumRows.some(r => !isValidDate(r.tanggal));
         if (hasBlankBenef || hasBlankPjum) bulanSet.add('Blank');
         populateSelect('filterBulan', bulanSet, 'Semua Bulan');
 
-        // Tahun: gabungan dari semua tanggal
         const tahunSet = new Set();
         benefRows.forEach(r => {
             const y = extractYear(r.tanggal);
@@ -207,19 +185,15 @@ const Filters = (function() {
 
     // ============================================================
     // BENEFICIARY FILTERS
-    // Sumber: Program Pendukung, Nama Staf, Tanggal Kegiatan
     // ============================================================
 
     function initBenefFilters(benef) {
-        // Program: dari benef.byProyek (Program Pendukung)
         const programSet = new Set(Object.keys(benef.byProyek || {}));
         populateSelect('benefFilterProgram', programSet, 'Semua Program');
 
-        // Staf: dari benef.byStaf (Nama Staf)
         const stafSet = new Set(Object.keys(benef.byStaf || {}));
         populateSelect('benefFilterStaf', stafSet, 'Semua Staf');
 
-        // Bulan: dari benef.daftar (Tanggal Kegiatan)
         const bulanSet = new Set();
         const rows = benef.daftar || [];
         rows.forEach(r => {
@@ -229,7 +203,6 @@ const Filters = (function() {
         if (rows.some(r => !isValidDate(r.tanggal))) bulanSet.add('Blank');
         populateSelect('benefFilterBulan', bulanSet, 'Semua Bulan');
 
-        // Tahun: dari benef.daftar (Tanggal Kegiatan)
         const tahunSet = new Set();
         rows.forEach(r => {
             const y = extractYear(r.tanggal);
@@ -241,19 +214,15 @@ const Filters = (function() {
 
     // ============================================================
     // PJUM FILTERS
-    // Sumber: Proyek, Staf, Tgl
     // ============================================================
 
     function initPjumFilters(pjum) {
-        // Program: dari pjum.byProyek (Proyek)
         const programSet = new Set(Object.keys(pjum.byProyek || {}));
         populateSelect('pjumFilterProgram', programSet, 'Semua Program');
 
-        // Staf: dari pjum.byStaf (Staf)
         const stafSet = new Set(Object.keys(pjum.byStaf || {}));
         populateSelect('pjumFilterStaf', stafSet, 'Semua Staf');
 
-        // Bulan: dari pjum.daftar (Tgl)
         const bulanSet = new Set();
         const rows = pjum.daftar || [];
         rows.forEach(r => {
@@ -263,7 +232,6 @@ const Filters = (function() {
         if (rows.some(r => !isValidDate(r.tanggal))) bulanSet.add('Blank');
         populateSelect('pjumFilterBulan', bulanSet, 'Semua Bulan');
 
-        // Tahun: dari pjum.daftar (Tgl)
         const tahunSet = new Set();
         rows.forEach(r => {
             const y = extractYear(r.tanggal);
@@ -281,10 +249,8 @@ const Filters = (function() {
         const select = document.getElementById(selectId);
         if (!select) return;
 
-        // Urutkan
         const values = Array.from(valueSet).filter(v => v && v !== '—' && v !== '' && v !== 'null');
         const sorted = values.sort((a, b) => {
-            // Blank selalu di akhir
             if (a === 'Blank') return 1;
             if (b === 'Blank') return -1;
             return a.localeCompare(b);
@@ -303,15 +269,10 @@ const Filters = (function() {
     // ============================================================
 
     function setupEventListeners() {
-        // Dashboard
         document.getElementById('applyFilter')?.addEventListener('click', () => applyDashboardFilters());
         document.getElementById('resetFilter')?.addEventListener('click', () => resetDashboardFilters());
-
-        // Beneficiary
         document.getElementById('benefApplyFilter')?.addEventListener('click', () => applyBenefFilters());
         document.getElementById('benefResetFilter')?.addEventListener('click', () => resetBenefFilters());
-
-        // PJUM
         document.getElementById('pjumApplyFilter')?.addEventListener('click', () => applyPjumFilters());
         document.getElementById('pjumResetFilter')?.addEventListener('click', () => resetPjumFilters());
     }
@@ -329,8 +290,6 @@ const Filters = (function() {
         };
 
         const filtered = filterDashboardData(rawData, currentFilters.dashboard);
-        
-        // Update dashboard
         if (window._dashboardData && window._dashboardData.updateDashboard) {
             window._dashboardData.updateDashboard(filtered);
         }
@@ -346,11 +305,9 @@ const Filters = (function() {
 
     function filterDashboardData(data, filters) {
         if (!data) return data;
-        
         const result = JSON.parse(JSON.stringify(data));
         const { program, staf, bulan, tahun } = filters;
 
-        // Filter Benef
         if (result.benef && result.benef.daftar) {
             let rows = result.benef.daftar;
             rows = filterBenefRows(rows, { program, staf, bulan, tahun });
@@ -358,7 +315,6 @@ const Filters = (function() {
             result.benef = reAggregateBenef(rows);
         }
 
-        // Filter PJUM
         if (result.pjum && result.pjum.daftar) {
             let rows = result.pjum.daftar;
             rows = filterPjumRows(rows, { program, staf, bulan, tahun });
@@ -416,7 +372,6 @@ const Filters = (function() {
         const { program, staf, bulan, tahun } = filters;
 
         return rows.filter(r => {
-            // Program (Program Pendukung)
             if (program !== 'all' && program !== 'Blank') {
                 if ((r.proyek || '') !== program) return false;
             }
@@ -424,7 +379,6 @@ const Filters = (function() {
                 if (r.proyek && r.proyek !== '' && r.proyek !== '—') return false;
             }
 
-            // Staf (Nama Staf)
             if (staf !== 'all' && staf !== 'Blank') {
                 if ((r.staf || '') !== staf) return false;
             }
@@ -432,7 +386,6 @@ const Filters = (function() {
                 if (r.staf && r.staf !== '' && r.staf !== '—') return false;
             }
 
-            // Bulan & Tahun (Tanggal Kegiatan)
             const month = extractMonth(r.tanggal);
             const year = extractYear(r.tanggal);
             const isValid = month !== null && year !== null;
@@ -502,7 +455,6 @@ const Filters = (function() {
         const { program, staf, bulan, tahun } = filters;
 
         return rows.filter(r => {
-            // Program (Proyek)
             if (program !== 'all' && program !== 'Blank') {
                 if ((r.proyek || '') !== program) return false;
             }
@@ -510,7 +462,6 @@ const Filters = (function() {
                 if (r.proyek && r.proyek !== '' && r.proyek !== '—') return false;
             }
 
-            // Staf
             if (staf !== 'all' && staf !== 'Blank') {
                 if ((r.staf || '') !== staf) return false;
             }
@@ -518,7 +469,6 @@ const Filters = (function() {
                 if (r.staf && r.staf !== '' && r.staf !== '—') return false;
             }
 
-            // Bulan & Tahun (Tgl)
             const month = extractMonth(r.tanggal);
             const year = extractYear(r.tanggal);
             const isValid = month !== null && year !== null;
@@ -604,7 +554,6 @@ const Filters = (function() {
             result.byKode[r.kode || '—'] = (result.byKode[r.kode || '—'] || 0) + cost;
             result.byKegiatan[r.kegiatan || '—'] = (result.byKegiatan[r.kegiatan || '—'] || 0) + cost;
             
-            // Komponen dari keterangan
             const komponen = classifyKomponen(r.keterangan || '');
             result.byKomponen[komponen] = (result.byKomponen[komponen] || 0) + cost;
         });
@@ -632,8 +581,34 @@ const Filters = (function() {
     }
 
     /**
-     * Dapatkan filter saat ini untuk tab tertentu
+     * Update Top 5 Jenis Kegiatan (dipanggil dari dashboard)
      */
+    function updateTop5(data) {
+        const list = document.getElementById('top5List');
+        if (!list) {
+            console.warn('[Filters] Element top5List tidak ditemukan');
+            return;
+        }
+
+        const byKegiatan = data?.benef?.byKegiatan || {};
+        const sorted = Object.entries(byKegiatan).sort((a, b) => b[1] - a[1]);
+        const top5 = sorted.slice(0, 5);
+        const total = sorted.reduce((sum, item) => sum + item[1], 0);
+
+        if (top5.length === 0) {
+            list.innerHTML = '<li style="justify-content:center;color:var(--gray-400);">Tidak ada data kegiatan</li>';
+            return;
+        }
+
+        list.innerHTML = top5.map((item, i) => {
+            const pct = total > 0 ? ((item[1] / total) * 100).toFixed(1) : 0;
+            return `<li>
+                <span>${i+1}. ${item[0] || 'Tidak diketahui'}</span>
+                <span class="badge">${pct}%</span>
+            </li>`;
+        }).join('');
+    }
+
     function getCurrentFilters(tab = 'dashboard') {
         return currentFilters[tab] || { program: 'all', staf: 'all', bulan: 'all', tahun: 'all' };
     }
@@ -654,6 +629,7 @@ const Filters = (function() {
         extractMonth,
         extractYear,
         isValidDate,
+        updateTop5,
     };
 
 })();
