@@ -150,6 +150,23 @@ function buildLaporanPage() {
   benef.forEach(function(r){if(r[B.proyek])allProgS[r[B.proyek]]=1;});
   var allProg = Object.keys(allProgS).sort();
 
+  /* KPI Summary */
+  var kpiEl = document.getElementById('laporan-kpi-grid');
+  if (kpiEl) {
+    var kpis = [
+      {icon:'💵',label:'Total Biaya PJUM',   val:fmtShort(totalCost),                           col:'sc-purple'},
+      {icon:'📋',label:'Total Transaksi',     val:pjum.length.toLocaleString(),                  col:'sc-orange'},
+      {icon:'👥',label:'Total Benef',         val:benef.length.toLocaleString(),                 col:'sc-green'},
+      {icon:'🆔',label:'Benef Unik',          val:Object.keys(uniqBSet).length.toLocaleString(), col:'sc-blue'},
+    ];
+    kpiEl.innerHTML = kpis.map(function(k){
+      return '<div class="stat-card '+k.col+'"><div class="stat-icon-wrap">'+k.icon+'</div>'+
+        '<div class="stat-body"><div class="stat-label">'+k.label+'</div>'+
+        '<div class="stat-value">'+k.val+'</div></div></div>';
+    }).join('');
+  }
+
+  /* Tabel per program */
   var tbody = document.getElementById('laporan-prog-body');
   if (tbody) tbody.innerHTML = allProg.map(function(prog, i) {
     var pRows  = pjum.filter(function(r){return r[P.proyek]===prog;});
@@ -168,6 +185,26 @@ function buildLaporanPage() {
       '<td class="num">'+(bTotal>0?bTotal.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(bUniq>0?bUniq.toLocaleString():'—')+'</td>' +
       '<td class="num">'+rpp+'</td>' +
+    '</tr>';
+  }).join('');
+  setEl('laporan-prog-count', allProg.length + ' program');
+
+  /* Tabel per staf */
+  var allStafS = {};
+  pjum.forEach(function(r){if(r[P.staf]) allStafS[r[P.staf]]=1;});
+  benef.forEach(function(r){if(r[B.staf]) allStafS[r[B.staf]]=1;});
+  var allStaf = Object.keys(allStafS).sort();
+  var stafTbody = document.getElementById('laporan-staf-body');
+  if (stafTbody) stafTbody.innerHTML = allStaf.map(function(staf, i) {
+    var pRowsS  = pjum.filter(function(r){return r[P.staf]===staf;});
+    var bRowsS  = benef.filter(function(r){return r[B.staf]===staf;});
+    var costS   = pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    return '<tr>' +
+      '<td>'+(i+1)+'</td>' +
+      '<td><strong>'+staf+'</strong></td>' +
+      '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td>' +
+      '<td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(bRowsS.length>0?bRowsS.length.toLocaleString():'—')+'</td>' +
     '</tr>';
   }).join('');
 }
