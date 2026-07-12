@@ -149,14 +149,14 @@ function renderAnalitikCharts() {
   pjum.forEach(function(r){if(r[P.proyek]) progSet[r[P.proyek]]=1;});
   var programs = Object.keys(progSet).slice(0,8);
   var bulanSet = {};
-  pjum.forEach(function(r){if(r[P.tgl]) bulanSet[r[P.tgl].slice(0,7)]=1;});
+  pjum.forEach(function(r){var bt=validTgl(r[P.tgl]); if(bt) bulanSet[bt]=1;});
   var allBulan = Object.keys(bulanSet).sort();
   var bLabels  = allBulan.map(function(k){var p=k.split('-');return bulanName(p[1])+"'"+p[0].slice(2);});
   var stackedDS = programs.map(function(prog,i){
     return {
       label: prog,
       data: allBulan.map(function(bln){
-        return pjum.filter(function(r){return r[P.proyek]===prog && r[P.tgl] && r[P.tgl].slice(0,7)===bln;})
+        return pjum.filter(function(r){return r[P.proyek]===prog && validTgl(r[P.tgl])===bln;})
                    .reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
       }),
       backgroundColor: PALETTE[i%PALETTE.length], borderRadius:2
@@ -178,14 +178,14 @@ function renderAnalitikCharts() {
   /* 3. Trend kategori benef per bulan (top 4) */
   var topKat = topN(groupCount(benef,function(r){return r[B.kategori];}),4).map(function(x){return x[0];});
   var bBulanSet={};
-  benef.forEach(function(r){if(r[B.tgl]) bBulanSet[r[B.tgl].slice(0,7)]=1;});
+  benef.forEach(function(r){var bbt=validTgl(r[B.tgl]); if(bbt) bBulanSet[bbt]=1;});
   var benefBulan  = Object.keys(bBulanSet).sort();
   var bbLabels    = benefBulan.map(function(k){var p=k.split('-');return bulanName(p[1])+"'"+p[0].slice(2);});
   var katDS = topKat.map(function(kat,i){
     return {
       label:kat,
       data: benefBulan.map(function(bln){
-        return benef.filter(function(r){return r[B.kategori]===kat&&r[B.tgl]&&r[B.tgl].slice(0,7)===bln;}).length;
+        return benef.filter(function(r){return r[B.kategori]===kat&&validTgl(r[B.tgl])===bln;}).length;
       }),
       borderColor:PALETTE[i], backgroundColor:PALETTE[i]+'22',
       fill:false, tension:.35, pointRadius:3

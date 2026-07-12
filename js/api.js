@@ -3,8 +3,8 @@
 ═══════════════════════════════════════════════ */
 
 var GAS_URL       = 'https://script.google.com/macros/s/AKfycbz7fjIFALDAbVo2TGEUi0j-RwLqZk7KxcUyU2rdNAiTHcEsAMD2i0O0g4-biV41Nw-hew/exec';
-var CACHE_KEY     = 'yai_raw_v5';
-var CACHE_KEY_TTL = 'yai_raw_ttl_v5';
+var CACHE_KEY     = 'yai_raw_v6';
+var CACHE_KEY_TTL = 'yai_raw_ttl_v6';
 var CACHE_TTL_MS  = 10 * 60 * 1000;
 
 window.P = { tgl:0, staf:1, proyek:2, kode:3, kegiatan:4, item:5, jumlah:6, file:7 };
@@ -46,6 +46,31 @@ function normText(val) {
 /* ─── normPlace: sama seperti normText, untuk kab/kec/desa ─── */
 function normPlace(val) { return normText(val); }
 
+/* ─── normProgram: preserve format tapi lowercase-konsisten untuk matching
+   "AYO - JPM" dan "Ayo - JPM" keduanya → "Ayo - JPM"
+   Aturan: token setelah "-" tetap uppercase jika semua kapital (singkatan)
+─── */
+function normProgram(val) {
+  var s = sanitizeStr(val);
+  if (!s) return '';
+  // Ganti multiple spaces
+  s = s.replace(/\s+/g, ' ').trim();
+  // Split by " - " untuk handle "Ayo - JPM"
+  var parts = s.split(/\s*-\s*/);
+  return parts.map(function(part, i) {
+    // Cek apakah part ini adalah singkatan (semua huruf kapital, no space)
+    var words = part.trim().split(/\s+/);
+    return words.map(function(w) {
+      if (!w) return w;
+      // Pertahankan singkatan ALL-CAPS (NLR, JPM, VCA, MPIG, dll) — max 6 char
+      if (w.length <= 6 && w === w.toUpperCase() && /^[A-Z0-9]+$/.test(w)) return w;
+      // Pertahankan jika ada angka mixed
+      if (/\d/.test(w)) return w;
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    }).join(' ');
+  }).join(' - ');
+}
+
 /* ─── normStaf: Title Case nama staf ─── */
 function normStaf(val) {
   var s = sanitizeStr(val);
@@ -81,7 +106,7 @@ async function fetchRawData(force) {
   var pjum = d.pjum || [];
   pjum.forEach(function(row) {
     row[window.P.kode]     = sanitizeStr(row[window.P.kode]);
-    row[window.P.proyek]   = normText(row[window.P.proyek]);
+    row[window.P.proyek]   = normProgram(row[window.P.proyek]);
     row[window.P.staf]     = normStaf(row[window.P.staf]);
     row[window.P.kegiatan] = normText(row[window.P.kegiatan]);
     row[window.P.item]     = sanitizeStr(row[window.P.item]);
@@ -104,7 +129,7 @@ async function fetchRawData(force) {
     row[window.B.disab]    = normText(row[window.B.disab]);
     row[window.B.kegiatan] = normText(row[window.B.kegiatan]);
     row[window.B.benefit]  = normText(row[window.B.benefit]);
-    row[window.B.proyek]   = normText(row[window.B.proyek]);
+    row[window.B.proyek]   = normProgram(row[window.B.proyek]);
     row[window.B.staf]     = normStaf(row[window.B.staf]);
     row[window.B.kode]     = sanitizeStr(row[window.B.kode]);
     row[window.B.instansi] = normText(row[window.B.instansi]);
@@ -142,6 +167,20 @@ window.bulanName = function(m) {
 window.bulanFull = function(m) {
   return ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][parseInt(m)-1] || m;
 };
+/* validTgl: kembalikan yyyy-MM atau null */
+window.validTgl = function(tgl) {
+  if (!tgl) return null;
+  var s = String(tgl).trim();
+  // Format valid: "2023-04" atau "2023-04-15"
+  if (!s.match(/^\d{4}-\d{2}/)) return null;
+  var parts = s.slice(0,7).split('-');
+  var y = parseInt(parts[0]);
+  var m = parseInt(parts[1]);
+  if (y < 2015 || y > 2030) return null;
+  if (m < 1 || m > 12) return null;
+  return s.slice(0,7);
+};
+
 window.groupSum = function(arr, keyFn, valFn) {
   var m = {};
   arr.forEach(function(r) {

@@ -91,7 +91,7 @@ function renderBenefCharts() {
   var B = window.B;
   var d = window.APP.benef.filtered;
 
-  var byBulan = sortedBulan(groupCount(d, function(r) { return r[B.tgl] ? r[B.tgl].slice(0,7) : null; }));
+  var byBulan = sortedBulan(groupCount(d, function(r) { return validTgl(r[B.tgl]); }));
   mkLine('bch-trend',
     byBulan.map(function(x) { var p=x[0].split('-'); return bulanName(p[1])+"'"+p[0].slice(2); }),
     byBulan.map(function(x) { return x[1]; }), '#F97316', { label:'Benef', noLegend:true });

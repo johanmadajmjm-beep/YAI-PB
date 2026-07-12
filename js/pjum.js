@@ -80,7 +80,7 @@ function renderPjumCharts() {
   var d = window.APP.pjum.filtered;
 
   var byBulan = sortedBulan(groupSum(d,
-    function(r) { return r[P.tgl] ? r[P.tgl].slice(0,7) : null; },
+    function(r) { return validTgl(r[P.tgl]); },
     function(r) { return r[P.jumlah]; }
   ));
   mkLine('pch-trend',
