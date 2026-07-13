@@ -61,9 +61,32 @@ function getFilteredBenef(skipField) {
 /* ── refreshBenefFilters: update semua dropdown kecuali yang baru diubah ── */
 function refreshBenefFilters(skipId) {
   var B = window.B;
+  /* Program — pakai dedupProgram agar alias berlaku */
+  if (skipId !== 'bf-proyek') {
+    var cur = v('bf-proyek');
+    var d = getFilteredBenef('proyek');
+    var allProg = dedupProgram(d.map(function(r){return r[B.proyek];}));
+    populateSel('bf-proyek', allProg);
+    document.getElementById('bf-proyek').value = cur;
+  }
+
+  /* Staf — pakai normStafKey + STAF_ALIAS agar alias berlaku */
+  if (skipId !== 'bf-staf') {
+    var curS = v('bf-staf');
+    var dS = getFilteredBenef('staf');
+    var stafMap = {};
+    dS.forEach(function(r) {
+      var k = normStafKey(r[B.staf]);
+      if (!k) return;
+      if (!stafMap[k]) stafMap[k] = getStafDisplay(r[B.staf]);
+    });
+    var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
+    populateSel('bf-staf', allStaf);
+    document.getElementById('bf-staf').value = curS;
+  }
+
+  /* Field lain — tetap uniqArr */
   var fields = {
-    'bf-proyek':   { skip:'proyek',   fn: function(d){ return uniqArr(d.map(function(r){return r[B.proyek];})); } },
-    'bf-staf':     { skip:'staf',     fn: function(d){ return uniqArr(d.map(function(r){return r[B.staf];})); } },
     'bf-kategori': { skip:'kategori', fn: function(d){ return uniqArr(d.map(function(r){return r[B.kategori];})); } },
     'bf-kab':      { skip:'kab',      fn: function(d){ return uniqArr(d.map(function(r){return r[B.kab];})); } },
     'bf-kec':      { skip:'kec',      fn: function(d){ return uniqArr(d.map(function(r){return r[B.kec];})); } },
@@ -133,9 +156,12 @@ function applyBenefFilter() {
   var bulan    = v('bf-bulan');
   var cari     = v('bf-cari').toLowerCase();
 
+  var proyekKey = proyek ? normKey(proyek) : '';
+  var stafKey   = staf   ? normStafKey(staf) : '';
+
   window.APP.benef.filtered = window.rawBenef.filter(function(r) {
-    if (proyek   && r[B.proyek]   !== proyek)   return false;
-    if (staf     && r[B.staf]     !== staf)     return false;
+    if (proyekKey && normKey(r[B.proyek])   !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[B.staf]) !== stafKey)   return false;
     if (kategori && r[B.kategori] !== kategori) return false;
     if (kab      && r[B.kab]      !== kab)      return false;
     if (kec      && r[B.kec]      !== kec)      return false;

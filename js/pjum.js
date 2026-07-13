@@ -54,19 +54,37 @@ function getFilteredPjum(skipField) {
 function refreshPjumFilters(skipId) {
   var P = window.P;
 
-  var fields = {
-    'pf-proyek': { skip:'proyek', fn: function(d){ return uniqArr(d.map(function(r){return r[P.proyek];})); } },
-    'pf-staf':   { skip:'staf',   fn: function(d){ return uniqArr(d.map(function(r){return r[P.staf];})); } },
-    'pf-kode':   { skip:'kode',   fn: function(d){ return uniqArr(d.map(function(r){return r[P.kode];})); } },
-  };
+  /* Program — pakai dedupProgram agar alias berlaku */
+  if (skipId !== 'pf-proyek') {
+    var cur = v('pf-proyek');
+    var d = getFilteredPjum('proyek');
+    var allProg = dedupProgram(d.map(function(r){return r[P.proyek];}));
+    populateSel('pf-proyek', allProg);
+    document.getElementById('pf-proyek').value = cur;
+  }
 
-  Object.keys(fields).forEach(function(id) {
-    if (id === skipId) return;
-    var cur = v(id);
-    var d = getFilteredPjum(fields[id].skip);
-    populateSel(id, fields[id].fn(d));
-    document.getElementById(id).value = cur;
-  });
+  /* Staf — pakai normStafKey + STAF_ALIAS agar alias berlaku */
+  if (skipId !== 'pf-staf') {
+    var curS = v('pf-staf');
+    var dS = getFilteredPjum('staf');
+    var stafMap = {};
+    dS.forEach(function(r) {
+      var k = normStafKey(r[P.staf]);
+      if (!k) return;
+      if (!stafMap[k]) stafMap[k] = getStafDisplay(r[P.staf]);
+    });
+    var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
+    populateSel('pf-staf', allStaf);
+    document.getElementById('pf-staf').value = curS;
+  }
+
+  /* Kode — tetap uniqArr */
+  if (skipId !== 'pf-kode') {
+    var curK = v('pf-kode');
+    var dK = getFilteredPjum('kode');
+    populateSel('pf-kode', uniqArr(dK.map(function(r){return r[P.kode];})));
+    document.getElementById('pf-kode').value = curK;
+  }
 
   /* Tahun */
   if (skipId !== 'pf-tahun') {
@@ -116,10 +134,13 @@ function applyPjumFilter() {
   var bulan  = v('pf-bulan');
   var cari   = v('pf-cari').toLowerCase().trim();
 
+  var proyekKey = proyek ? normKey(proyek) : '';
+  var stafKey   = staf   ? normStafKey(staf) : '';
+
   window.APP.pjum.filtered = window.rawPjum.filter(function(r) {
-    if (proyek && r[P.proyek] !== proyek) return false;
-    if (staf   && r[P.staf]  !== staf)   return false;
-    if (kode   && r[P.kode]  !== kode)   return false;
+    if (proyekKey && normKey(r[P.proyek])   !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[P.staf]) !== stafKey)   return false;
+    if (kode      && r[P.kode]              !== kode)      return false;
     var tglValid = validTgl(r[P.tgl]);
     if (tahun === '__blank__' && tglValid) return false;
     if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
