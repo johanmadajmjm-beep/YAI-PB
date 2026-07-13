@@ -214,13 +214,16 @@ function refreshDashFilters(skipId) {
     var bulan     = (skipField !== 'bulan'  && curBulan)  ? curBulan : '';
 
     function filterRow(tgl, proyek, staf) {
-      if (proyekKey && normKey(proyek)   !== proyekKey) return false;
-      if (stafKey   && normStafKey(staf) !== stafKey)   return false;
-      var tglValid = validTgl(tgl);
-      if (tahun === '__blank__' && tglValid) return false;
-      if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
-      if (bulan === '__blank__' && tglValid) return false;
-      if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
+      if (proyekKey && normKey(proyek||'')   !== proyekKey) return false;
+      if (stafKey   && normStafKey(staf||'') !== stafKey)   return false;
+      /* Tanggal — semua data masuk, hanya filter jika ada pilihan */
+      if (tahun || bulan) {
+        var tglValid = validTgl(tgl);
+        if (tahun === '__blank__') { if (tglValid) return false; }
+        else if (tahun) { if (!tglValid || !tglValid.startsWith(tahun)) return false; }
+        if (bulan === '__blank__') { if (tglValid) return false; }
+        else if (bulan) { if (!tglValid || tglValid.slice(5,7) !== bulan) return false; }
+      }
       return true;
     }
 
