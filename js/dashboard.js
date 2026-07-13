@@ -36,10 +36,26 @@ function buildDashboard() {
 
   /* ── Trend Benef per Bulan ── */
   var benefByBulan = sortedBulan(groupCount(benef, function(r) { return validTgl(r[B.tgl]); }));
-  mkLine('ch-dash-benef-trend',
-    benefByBulan.map(function(x) { var p=x[0].split('-'); return bulanName(p[1])+"'"+p[0].slice(2); }),
-    benefByBulan.map(function(x) { return x[1]; }),
-    '#F97316', { label:'Beneficiary', noLegend:true });
+
+  var noTglEl = document.getElementById('ch-dash-benef-trend-notgl');
+  var wrapEl  = document.getElementById('ch-dash-benef-trend') ? document.getElementById('ch-dash-benef-trend').parentElement : null;
+  if (benefByBulan.length === 0) {
+    var cv = document.getElementById('ch-dash-benef-trend'); if(cv) cv.style.display='none';
+    if (!noTglEl && wrapEl) {
+      var msg=document.createElement('div');
+      msg.id='ch-dash-benef-trend-notgl';
+      msg.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
+      msg.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
+      wrapEl.appendChild(msg);
+    } else if(noTglEl) { noTglEl.style.display='flex'; }
+  } else {
+    var cv2=document.getElementById('ch-dash-benef-trend'); if(cv2) cv2.style.display='';
+    if(noTglEl) noTglEl.style.display='none';
+    mkLine('ch-dash-benef-trend',
+      benefByBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
+      benefByBulan.map(function(x){return x[1];}),
+      '#F97316',{label:'Beneficiary',noLegend:true});
+  }
 
   /* ── Distribusi Jenis Benef (donut) ── */
   var katData  = topN(groupCount(benef, function(r) { return r[B.kategori]; }), 6);
@@ -61,10 +77,26 @@ function buildDashboard() {
     function(r) { return validTgl(r[P.tgl]); },
     function(r) { return r[P.jumlah]; }
   ));
-  mkBar('ch-dash-pjum-trend',
-    pjumByBulan.map(function(x) { var p=x[0].split('-'); return bulanName(p[1])+"'"+p[0].slice(2); }),
-    pjumByBulan.map(function(x) { return x[1]; }),
-    '#F97316', { label:'Pengeluaran', yFmt:fmtShort, noLegend:true });
+
+  var noTglEl = document.getElementById('ch-dash-pjum-trend-notgl');
+  var wrapEl  = document.getElementById('ch-dash-pjum-trend') ? document.getElementById('ch-dash-pjum-trend').parentElement : null;
+  if (pjumByBulan.length === 0) {
+    var cv = document.getElementById('ch-dash-pjum-trend'); if(cv) cv.style.display='none';
+    if (!noTglEl && wrapEl) {
+      var msg=document.createElement('div');
+      msg.id='ch-dash-pjum-trend-notgl';
+      msg.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
+      msg.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
+      wrapEl.appendChild(msg);
+    } else if(noTglEl) { noTglEl.style.display='flex'; }
+  } else {
+    var cv2=document.getElementById('ch-dash-pjum-trend'); if(cv2) cv2.style.display='';
+    if(noTglEl) noTglEl.style.display='none';
+    mkBar('ch-dash-pjum-trend',
+      pjumByBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
+      pjumByBulan.map(function(x){return x[1];}),
+      '#F97316',{label:'Pengeluaran',yFmt:fmtShort,noLegend:true});
+  }
 
   /* ── Top Jenis Kegiatan ── */
   var kegData  = topN(groupCount(benef, function(r) { return r[B.kegiatan]; }), 5);

@@ -165,10 +165,26 @@ function renderPjumCharts() {
   var P=window.P, d=window.APP.pjum.filtered;
 
   var byBulan=sortedBulan(groupSum(d,function(r){return validTgl(r[P.tgl]);},function(r){return r[P.jumlah];}));
-  mkLine('pch-trend',
-    byBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
-    byBulan.map(function(x){return x[1];}),
-    '#F97316',{label:'Pengeluaran',yFmt:fmtShort,noLegend:true});
+
+  var noTglEl = document.getElementById('pch-trend-notgl');
+  var wrapEl  = document.getElementById('pch-trend') ? document.getElementById('pch-trend').parentElement : null;
+  if (byBulan.length === 0) {
+    var cv = document.getElementById('pch-trend'); if(cv) cv.style.display='none';
+    if (!noTglEl && wrapEl) {
+      var msg=document.createElement('div');
+      msg.id='pch-trend-notgl';
+      msg.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
+      msg.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
+      wrapEl.appendChild(msg);
+    } else if(noTglEl) { noTglEl.style.display='flex'; }
+  } else {
+    var cv2=document.getElementById('pch-trend'); if(cv2) cv2.style.display='';
+    if(noTglEl) noTglEl.style.display='none';
+    mkLine('pch-trend',
+      byBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
+      byBulan.map(function(x){return x[1];}),
+      '#F97316',{label:'Pengeluaran',yFmt:fmtShort,noLegend:true});
+  }
 
   var byKomp=topN(groupSum(d,function(r){return classifyItem(r[P.item]);},function(r){return r[P.jumlah];}),9);
   var kompTotal=byKomp.reduce(function(s,x){return s+x[1];},0);
