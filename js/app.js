@@ -32,7 +32,8 @@ function navigate(page) {
 
   if (APP.loaded) {
     if (page === 'laporan')  buildLaporanPage();
-    if (page === 'dashboard') populateDashFilters();
+    // Dashboard: hanya re-render, TIDAK reset/repopulate filter
+    // Filter sudah di-attach saat buildAll pertama kali
   }
 }
 
@@ -185,80 +186,138 @@ function dedupByNormKey(arr, keyFn) {
   return Object.values(map).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
 }
 
+/* ── getStafDisplay: canonical display name untuk staf ── */
+function getStafDisplay(val) {
+  if (!val || !String(val).trim()) return null;
+  var lower = String(val).trim().toLowerCase();
+  if (STAF_ALIAS[lower]) return STAF_ALIAS[lower];
+  var s = String(val).trim();
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+/* ── refreshDashFilters: update isi dropdown berdasarkan data yang sudah terfilter
+   Cascading: tiap filter hanya tampilkan nilai yang ada di data hasil filter LAIN
+   (filter sendiri tidak ikut memfilter dirinya sendiri)
+── */
+function refreshDashFilters(skipId) {
+  var P = window.P, B = window.B;
+  var curProyek = v('dash-proyek');
+  var curStaf   = v('dash-staf');
+  var curTahun  = v('dash-tahun');
+  var curBulan  = v('dash-bulan');
+
+  /* Helper: filter data tapi SKIP satu filter tertentu */
+  function getFiltered(skipField) {
+    var proyekKey = (skipField !== 'proyek' && curProyek) ? normKey(curProyek) : '';
+    var stafKey   = (skipField !== 'staf'   && curStaf)   ? normStafKey(curStaf) : '';
+    var tahun     = (skipField !== 'tahun'  && curTahun)  ? curTahun : '';
+    var bulan     = (skipField !== 'bulan'  && curBulan)  ? curBulan : '';
+
+    function filterRow(tgl, proyek, staf) {
+      if (proyekKey && normKey(proyek)   !== proyekKey) return false;
+      if (stafKey   && normStafKey(staf) !== stafKey)   return false;
+      var tglValid = validTgl(tgl);
+      if (tahun === '__blank__' && tglValid) return false;
+      if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+      if (bulan === '__blank__' && tglValid) return false;
+      if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
+      return true;
+    }
+
+    var fp = window.rawPjum.filter(function(r) {
+      return filterRow(r[P.tgl], r[P.proyek], r[P.staf]);
+    });
+    var fb = window.rawBenef.filter(function(r) {
+      return filterRow(r[B.tgl], r[B.proyek], r[B.staf]);
+    });
+    return { pjum: fp, benef: fb };
+  }
+
+  /* ── Update PROGRAM dropdown (skip filter proyek) ── */
+  if (skipId !== 'dash-proyek') {
+    var fd = getFiltered('proyek');
+    var rawProg = fd.pjum.map(function(r){return r[P.proyek];})
+      .concat(fd.benef.map(function(r){return r[B.proyek];}));
+    var allProg = dedupProgram(rawProg);
+    populateSel('dash-proyek', allProg);
+    document.getElementById('dash-proyek').value = curProyek;
+  }
+
+  /* ── Update STAF dropdown (skip filter staf) ── */
+  if (skipId !== 'dash-staf') {
+    var fd2 = getFiltered('staf');
+    var rawStaf = fd2.pjum.map(function(r){return r[P.staf];})
+      .concat(fd2.benef.map(function(r){return r[B.staf];}));
+    var stafMap = {};
+    rawStaf.forEach(function(val) {
+      var k = normStafKey(val);
+      if (!k) return;
+      if (!stafMap[k]) stafMap[k] = getStafDisplay(val);
+    });
+    var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
+    populateSel('dash-staf', allStaf);
+    document.getElementById('dash-staf').value = curStaf;
+  }
+
+  /* ── Update TAHUN dropdown (skip filter tahun) ── */
+  if (skipId !== 'dash-tahun') {
+    var fd3 = getFiltered('tahun');
+    var tahunSet = {}, hasBlanks = false;
+    fd3.pjum.forEach(function(r) {
+      var t = validTgl(r[P.tgl]);
+      if (t) tahunSet[t.slice(0,4)] = 1; else hasBlanks = true;
+    });
+    fd3.benef.forEach(function(r) {
+      var t = validTgl(r[B.tgl]);
+      if (t) tahunSet[t.slice(0,4)] = 1; else hasBlanks = true;
+    });
+    var allTahun = Object.keys(tahunSet).sort().reverse();
+    if (hasBlanks) allTahun.push('__blank__');
+    populateSel('dash-tahun', allTahun, function(v) {
+      return v === '__blank__' ? '(Tanggal Kosong)' : v;
+    });
+    document.getElementById('dash-tahun').value = curTahun;
+  }
+
+  /* ── Update BULAN dropdown (skip filter bulan) ── */
+  if (skipId !== 'dash-bulan') {
+    var fd4 = getFiltered('bulan');
+    var bulanSet = {}, hasBlanks2 = false;
+    fd4.pjum.forEach(function(r) {
+      var t = validTgl(r[P.tgl]);
+      if (t) bulanSet[t.slice(5,7)] = 1; else hasBlanks2 = true;
+    });
+    fd4.benef.forEach(function(r) {
+      var t = validTgl(r[B.tgl]);
+      if (t) bulanSet[t.slice(5,7)] = 1; else hasBlanks2 = true;
+    });
+    var allBulan = Object.keys(bulanSet).sort();
+    if (hasBlanks2) allBulan.push('__blank__');
+    populateSel('dash-bulan', allBulan, function(v) {
+      return v === '__blank__' ? '(Tanggal Kosong)' : bulanName(v);
+    });
+    document.getElementById('dash-bulan').value = curBulan;
+  }
+}
+
 /* Dashboard filter helpers */
 function populateDashFilters() {
-  var pjum  = window.rawPjum;
-  var benef = window.rawBenef;
-  var P = window.P, B = window.B;
-
-  // 1. Program: kolom proyek (PJUM) + kolom program pendukung (Benef)
-  //    deduplikasi berdasarkan normKey agar "Ayo - JPM" = "AYO-JPM"
-  var rawProg = pjum.map(function(r){return r[P.proyek];})
-    .concat(benef.map(function(r){return r[B.proyek];}));
-  var allProg = dedupProgram(rawProg);
-  populateSel('dash-proyek', allProg);
-
-  // 2. Staf: kolom staf (PJUM) + kolom nama staf (Benef)
-  var rawStaf = pjum.map(function(r){return r[P.staf];})
-    .concat(benef.map(function(r){return r[B.staf];}));
-  // Deduplikasi staf — normStafKey sudah include STAF_ALIAS
-  // sehingga 'Gens'/'gens' → key 'gen' → ditampilkan sebagai 'Gen'
-  var stafMap = {};
-  rawStaf.forEach(function(val) {
-    if (!val || !String(val).trim()) return;
-    var k = normStafKey(val); // sudah include alias resolution
-    if (!k) return;
-    // Nama tampilan: ambil dari STAF_ALIAS jika ada, else Title Case
-    var display = (function() {
-      var lower = String(val).trim().toLowerCase();
-      // Cek apakah ada di alias — jika ya, pakai nilai canonical dari STAF_ALIAS
-      if (STAF_ALIAS[lower]) return STAF_ALIAS[lower];
-      // Tidak ada alias — Title Case
-      return String(val).trim().charAt(0).toUpperCase() + String(val).trim().slice(1).toLowerCase();
-    })();
-    if (!stafMap[k]) {
-      stafMap[k] = display;
-    } else {
-      // Sudah ada — tidak perlu update karena alias sudah canonical
-    }
-  });
-  var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
-  populateSel('dash-staf', allStaf);
-
-  // 3. Tahun: dari tgl PJUM + tanggal kegiatan Benef, ambil tahun saja
-  var tahunSet = {};
-  pjum.forEach(function(r) {
-    var t = r[P.tgl] ? String(r[P.tgl]).slice(0,4) : null;
-    if (t && t.match(/^20\d{2}$/)) tahunSet[t] = 1;
-  });
-  benef.forEach(function(r) {
-    var t = r[B.tgl] ? String(r[B.tgl]).slice(0,4) : null;
-    if (t && t.match(/^20\d{2}$/)) tahunSet[t] = 1;
-  });
-  var allTahun = Object.keys(tahunSet).sort().reverse();
-  populateSel('dash-tahun', allTahun);
-
-  // 4. Bulan: dari tgl PJUM + tanggal kegiatan Benef, ambil bulan yang benar-benar ada
-  var bulanSet = {};
-  pjum.forEach(function(r) {
-    var m = r[P.tgl] ? String(r[P.tgl]).slice(5,7) : null;
-    if (m && m.match(/^(0[1-9]|1[0-2])$/)) bulanSet[m] = 1;
-  });
-  benef.forEach(function(r) {
-    var m = r[B.tgl] ? String(r[B.tgl]).slice(5,7) : null;
-    if (m && m.match(/^(0[1-9]|1[0-2])$/)) bulanSet[m] = 1;
-  });
-  var allBulan = Object.keys(bulanSet).sort();
-  populateSel('dash-bulan', allBulan, bulanName);
-
-  // Attach listener sekali saja
   if (!window._dashFilterAttached) {
+    // Pertama kali: isi dropdown dari data lengkap
+    refreshDashFilters(null);
+
+    // Attach listener — tiap perubahan: refresh filter lain + render
     ['dash-proyek','dash-staf','dash-tahun','dash-bulan'].forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.addEventListener('change', applyDashFilter);
+      if (el) el.addEventListener('change', function() {
+        refreshDashFilters(id);
+        applyDashFilter();
+      });
     });
     window._dashFilterAttached = true;
   }
+  // Navigasi kembali ke dashboard — TIDAK reset filter, hanya re-render
+  // supaya filter yang sudah dipilih tetap aktif
 }
 
 function getDashFiltered() {
@@ -272,18 +331,24 @@ function getDashFiltered() {
   var stafKey   = staf   ? normStafKey(staf) : '';
 
   var filteredBenef = window.rawBenef.filter(function(r) {
-    if (proyekKey && normKey(r[B.proyek])     !== proyekKey) return false;
-    if (stafKey   && normStafKey(r[B.staf])   !== stafKey)   return false;
-    if (tahun     && !(r[B.tgl]||'').startsWith(tahun))      return false;
-    if (bulan     && (r[B.tgl]||'').slice(5,7) !== bulan)    return false;
+    if (proyekKey && normKey(r[B.proyek])   !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[B.staf]) !== stafKey)   return false;
+    var tglValid = validTgl(r[B.tgl]);
+    if (tahun === '__blank__' && tglValid)  return false;  // hanya yang blank
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid)  return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
     return true;
   });
 
   var filteredPjum = window.rawPjum.filter(function(r) {
-    if (proyekKey && normKey(r[P.proyek])     !== proyekKey) return false;
-    if (stafKey   && normStafKey(r[P.staf])   !== stafKey)   return false;
-    if (tahun     && !(r[P.tgl]||'').startsWith(tahun))      return false;
-    if (bulan     && (r[P.tgl]||'').slice(5,7) !== bulan)    return false;
+    if (proyekKey && normKey(r[P.proyek])   !== proyekKey) return false;
+    if (stafKey   && normStafKey(r[P.staf]) !== stafKey)   return false;
+    var tglValid = validTgl(r[P.tgl]);
+    if (tahun === '__blank__' && tglValid)  return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid)  return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
     return true;
   });
 
