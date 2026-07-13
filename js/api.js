@@ -3,8 +3,8 @@
 ═══════════════════════════════════════════════ */
 
 var GAS_URL       = 'https://script.google.com/macros/s/AKfycbz7fjIFALDAbVo2TGEUi0j-RwLqZk7KxcUyU2rdNAiTHcEsAMD2i0O0g4-biV41Nw-hew/exec';
-var CACHE_KEY     = 'yai_raw_v7';
-var CACHE_KEY_TTL = 'yai_raw_ttl_v7';
+var CACHE_KEY     = 'yai_raw_v8';
+var CACHE_KEY_TTL = 'yai_raw_ttl_v8';
 var CACHE_TTL_MS  = 10 * 60 * 1000;
 
 window.P = { tgl:0, staf:1, proyek:2, kode:3, kegiatan:4, item:5, jumlah:6, file:7 };
@@ -119,7 +119,7 @@ async function fetchRawData(force) {
   var pjum = d.pjum || [];
   pjum.forEach(function(row) {
     row[window.P.kode]     = sanitizeStr(row[window.P.kode]);
-    row[window.P.proyek]   = normProgram(row[window.P.proyek]);
+    row[window.P.proyek]   = sanitizeStr(row[window.P.proyek]);
     row[window.P.staf]     = normStaf(row[window.P.staf]);
     row[window.P.kegiatan] = normText(row[window.P.kegiatan]);
     row[window.P.item]     = sanitizeStr(row[window.P.item]);
@@ -142,7 +142,7 @@ async function fetchRawData(force) {
     row[window.B.disab]    = normText(row[window.B.disab]);
     row[window.B.kegiatan] = normText(row[window.B.kegiatan]);
     row[window.B.benefit]  = normText(row[window.B.benefit]);
-    row[window.B.proyek]   = normProgram(row[window.B.proyek]);
+    row[window.B.proyek]   = sanitizeStr(row[window.B.proyek]);
     row[window.B.staf]     = normStaf(row[window.B.staf]);
     row[window.B.kode]     = sanitizeStr(row[window.B.kode]);
     row[window.B.instansi] = normText(row[window.B.instansi]);

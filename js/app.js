@@ -78,7 +78,7 @@ function buildAll() {
    key   = normKey dari nama APAPUN dalam grup
    value = normKey canonical (yang akan ditampilkan di dropdown)
 ── */
-var PROGRAM_ALIAS = {
+window.PROGRAM_ALIAS = {
   // Ayo - JPM group
   'ayo-bersahaja':  'ayo-jpm',
   'ayo-odgj':       'ayo-jpm',
@@ -99,7 +99,7 @@ var PROGRAM_ALIAS = {
    "Ayo - JPM", "AYO-JPM", "AYO - JPM" → semua jadi "ayo-jpm"
    "Ayo - NLR (KUBIK)", "Ayo - NLR(KUBIK)" → "ayo-nlr(kubik)"
 ── */
-function normKey(s) {
+window.normKey = function(s) {
   if (!s) return '';
   var k = String(s).trim()
     .toLowerCase()
@@ -113,19 +113,19 @@ function normKey(s) {
 }
 
 /* ── ALIAS MAP STAF: nama berbeda tapi orang sama ── */
-var STAF_ALIAS = {
+window.STAF_ALIAS = {
   'gens': 'gen',   // Gens = Gen
 };
 
 /* ── normStafKey: lowercase + trim + alias ── */
-function normStafKey(s) {
+window.normStafKey = function(s) {
   if (!s) return '';
   var k = String(s).trim().toLowerCase().replace(/\s+/g, ' ');
   return STAF_ALIAS[k] || k;
 }
 
 /* ── bestStafName: pilih nama tampilan terbaik (Title Case) ── */
-function bestStafName(name) {
+window.bestStafName = function(name) {
   if (!name) return '';
   var s = String(name).trim();
   // Jika semua huruf sama (semua caps atau semua lower), Title Case
@@ -139,7 +139,7 @@ function bestStafName(name) {
    - normKey sudah include PROGRAM_ALIAS, jadi alias otomatis digabung ke canonical
    - yang tampil di dropdown = canonical key, dicari nama terbaik dari data
 ── */
-function dedupProgram(arr) {
+window.dedupProgram = function(arr) {
   // map: canonicalKey → nama terbaik untuk ditampilkan
   var map = {};
 
@@ -168,7 +168,7 @@ function dedupProgram(arr) {
 }
 
 /* ── dedupByNormKey: generik untuk staf dll ── */
-function dedupByNormKey(arr, keyFn) {
+window.dedupByNormKey = function(arr, keyFn) {
   var map = {};
   arr.forEach(function(val) {
     if (!val || !String(val).trim()) return;
@@ -187,7 +187,7 @@ function dedupByNormKey(arr, keyFn) {
 }
 
 /* ── getStafDisplay: canonical display name untuk staf ── */
-function getStafDisplay(val) {
+window.getStafDisplay = function(val) {
   if (!val || !String(val).trim()) return null;
   var lower = String(val).trim().toLowerCase();
   if (STAF_ALIAS[lower]) return STAF_ALIAS[lower];
