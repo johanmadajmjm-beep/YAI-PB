@@ -193,9 +193,30 @@ function renderBenefCharts() {
   var d = window.APP.benef.filtered;
 
   var byBulan = sortedBulan(groupCount(d,function(r){return validTgl(r[B.tgl]);}));
-  mkLine('bch-trend',
-    byBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
-    byBulan.map(function(x){return x[1];}), '#F97316', {label:'Benef',noLegend:true});
+  var trendEl = document.getElementById('bch-trend');
+  var trendWrap = trendEl ? trendEl.parentElement : null;
+  var noTglMsg = document.getElementById('bch-trend-notgl');
+
+  if (byBulan.length === 0) {
+    /* Semua data tidak punya tanggal valid */
+    if (trendEl) trendEl.style.display = 'none';
+    if (!noTglMsg && trendWrap) {
+      var msg = document.createElement('div');
+      msg.id = 'bch-trend-notgl';
+      msg.style.cssText = 'display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
+      msg.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
+      trendWrap.appendChild(msg);
+    } else if (noTglMsg) {
+      noTglMsg.style.display = 'flex';
+    }
+  } else {
+    /* Ada data valid — tampilkan chart */
+    if (trendEl) trendEl.style.display = '';
+    if (noTglMsg) noTglMsg.style.display = 'none';
+    mkLine('bch-trend',
+      byBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
+      byBulan.map(function(x){return x[1];}), '#F97316', {label:'Benef',noLegend:true});
+  }
 
   var gMap={'L':'Laki-laki','P':'Perempuan','—':'Tidak Diisi'};
   var byG = groupCount(d,function(r){return gMap[r[B.gender]]||'Tidak Diisi';});
