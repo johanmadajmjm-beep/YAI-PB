@@ -105,12 +105,7 @@ function refreshBenefFilters(skipId) {
   if (skipId !== 'bf-staf') {
     var curS = v('bf-staf');
     var dS = getFilteredBenef('staf');
-    var sm = {};
-    dS.forEach(function(r) {
-      var k = normStafKey(r[B.staf]); if(!k) return;
-      if (!sm[k]) sm[k] = getStafDisplay(r[B.staf]);
-    });
-    populateSel('bf-staf', Object.values(sm).filter(Boolean).sort(function(a,b){return a.localeCompare(b);}));
+    populateSel('bf-staf', dedupStaf(dS.map(function(r){return r[B.staf];})));
     document.getElementById('bf-staf').value = curS;
   }
 

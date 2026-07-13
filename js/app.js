@@ -74,109 +74,219 @@ function buildAll() {
   if (al) al.style.display = 'flex';
 }
 
-/* ── ALIAS MAP: program berbeda nama tapi sama secara organisasi ──
-   key   = normKey dari nama APAPUN dalam grup
-   value = normKey canonical (yang akan ditampilkan di dropdown)
-── */
-window.PROGRAM_ALIAS = {
-  // Ayo - JPM group
-  'ayo-bersahaja':  'ayo-jpm',
-  'ayo-odgj':       'ayo-jpm',
-  'ayo-svd(odgj)':  'ayo-jpm',
+/* ═══════════════════════════════════════════════
+   PROGRAM NORMALIZATION
+   23 canonical programs + alias mapping
+═══════════════════════════════════════════════ */
 
-  // Ayo - VCA group
-  'vca':            'ayo-vca',
+/* 23 program canonical — nama resmi yang tampil di dropdown */
+window.CANONICAL_PROGRAMS = [
+  'Ayo - AOI',
+  'Ayo - BV',
+  'Ayo - Disabilitas',
+  'Ayo - IrishAid',
+  'Ayo - JPM',
+  'Ayo - KEHATI',
+  'Ayo - Keswa Matim',
+  'Ayo - Lembaga',
+  'Ayo - MPIG',
+  'Ayo - NLR',
+  'Ayo - NLR (BEN)',
+  'Ayo - NLR (KUBIK)',
+  'Ayo - NLR (PADI)',
+  'Ayo - NLR (Small Grant)',
+  'Ayo - PolishAid',
+  'Ayo - PSE KR',
+  'Ayo - Sch (Stunting)',
+  'Ayo - Sch/SVD',
+  'Ayo - Schmitz (Stunting)',
+  'Ayo - SDW',
+  'Ayo - SVD (Dis)',
+  'Ayo - SVD (Keswa Matim)',
+  'Ayo - SVD (Keswa)',
+  'Ayo - SVD/SDW',
+  'Ayo - Swiss Embassy',
+  'Ayo - TF',
+  'Ayo - Transfair',
+  'Ayo - VA',
+  'Ayo - VA (Sorgum)',
+  'Ayo - VCA',
+  'Ayo - VICRA',
+  'PSE Keuskupan'
+];
 
-  // Ayo - NLR (KUBIK) group
-  'nlr-kubik':      'ayo-nlr(kubik)',
-
-  // Ayo - NLR group
-  'nlr':            'ayo-nlr',
-  // 'ayo-nlr(ben)' → grup tersendiri, tidak di-alias
-};
-
-/* ── normKey: key untuk deduplikasi program
-   "Ayo - JPM", "AYO-JPM", "AYO - JPM" → semua jadi "ayo-jpm"
-   "Ayo - NLR (KUBIK)", "Ayo - NLR(KUBIK)" → "ayo-nlr(kubik)"
-── */
-window.normKey = function(s) {
+/* Helper: normalisasi string jadi key pembanding */
+function _nk(s) {
   if (!s) return '';
-  var k = String(s).trim()
-    .toLowerCase()
+  return String(s).trim().toLowerCase()
     .replace(/\s*-\s*/g, '-')
     .replace(/\s*\(\s*/g, '(')
     .replace(/\s*\)\s*/g, ')')
-    .replace(/\s+/g, ' ')
-    .trim();
-  // Cek alias — kalau ada, kembalikan canonical key
-  return PROGRAM_ALIAS[k] || k;
+    .replace(/\s+/g, ' ').trim();
 }
 
-/* ── ALIAS MAP STAF: nama berbeda tapi orang sama ── */
-window.STAF_ALIAS = {
-  'gens': 'gen',   // Gens = Gen
+/* Map: normKey → canonical display name */
+window.PROG_CANONICAL_MAP = {};
+window.CANONICAL_PROGRAMS.forEach(function(p) {
+  window.PROG_CANONICAL_MAP[_nk(p)] = p;
+});
+
+/* Alias: variasi nama → normKey canonical
+   Semua variasi yang ada di data GSheet */
+window.PROGRAM_ALIAS = {
+  /* JPM group */
+  'ayo-bersahaja':   'ayo-jpm',
+  'ayo-odgj':        'ayo-jpm',
+  'ayo-svd(odgj)':   'ayo-jpm',
+  /* VCA group */
+  'vca':             'ayo-vca',
+  /* NLR group */
+  'nlr':             'ayo-nlr',
+  'ayo nlr':         'ayo-nlr',
+  /* NLR KUBIK group */
+  'nlr-kubik':       'ayo-nlr(kubik)',
+  /* VA group — variasi penulisan */
+  'ayo-va':          'ayo-va',
+  'ayo-va':          'ayo-va',
+  /* Transfair group */
+  'ayo-transfair':   'ayo-transfair',
+  /* SVD/SDW group */
+  'ayo-svd/sdw':     'ayo-svd/sdw',
+  /* KEHATI group */
+  'ayo-kehati':      'ayo-kehati',
+  /* Lembaga group */
+  'ayo-lembaga':     'ayo-lembaga',
+  /* Schmitz group */
+  'ayo-schmitz(stunting)': 'ayo-schmitz(stunting)',
+  'ayo-sch(stunting)':     'ayo-sch(stunting)',
 };
 
-/* ── normStafKey: lowercase + trim + alias ── */
-window.normStafKey = function(s) {
+/* normKey: kembalikan canonical normKey setelah alias resolution */
+window.normKey = function(s) {
   if (!s) return '';
-  var k = String(s).trim().toLowerCase().replace(/\s+/g, ' ');
-  return STAF_ALIAS[k] || k;
-}
+  var k = _nk(s);
+  return window.PROGRAM_ALIAS[k] || k;
+};
 
-/* ── bestStafName: pilih nama tampilan terbaik (Title Case) ── */
-window.bestStafName = function(name) {
-  if (!name) return '';
-  var s = String(name).trim();
-  // Jika semua huruf sama (semua caps atau semua lower), Title Case
-  if (s === s.toUpperCase() || s === s.toLowerCase()) {
-    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-  }
-  return s; // sudah mixed case, pakai apa adanya
-}
+/* normKeyToDisplay: dari raw value → display name canonical */
+window.normKeyToDisplay = function(s) {
+  if (!s) return '';
+  var k = window.normKey(s);
+  return window.PROG_CANONICAL_MAP[k] || String(s).trim();
+};
 
-/* ── dedupProgram: deduplikasi program
-   - normKey sudah include PROGRAM_ALIAS, jadi alias otomatis digabung ke canonical
-   - yang tampil di dropdown = canonical key, dicari nama terbaik dari data
-── */
+/* dedupProgram: dari array raw values → list canonical display name
+   yang ada di data, urutan sesuai CANONICAL_PROGRAMS */
 window.dedupProgram = function(arr) {
-  // map: canonicalKey → nama terbaik untuk ditampilkan
-  var map = {};
-
+  /* Kumpul canonical keys yang ada di data */
+  var found = {};
   arr.forEach(function(val) {
     if (!val || !String(val).trim()) return;
-    var canonicalKey = normKey(val); // sudah include alias resolution
-    if (!canonicalKey) return;
+    var k = window.normKey(val);
+    if (k) found[k] = 1;
+  });
 
-    if (!map[canonicalKey]) {
-      map[canonicalKey] = val;
-    } else {
-      // Prefer format "Ayo - XXX" (ada spasi di sekitar -)
-      var cur = map[canonicalKey];
-      var valHasSpace  = /\w\s+-\s+\w/.test(val);
-      var curHasSpace  = /\w\s+-\s+\w/.test(cur);
-      var valTitleCase = val === val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-      var curTitleCase = cur === cur.charAt(0).toUpperCase() + cur.slice(1).toLowerCase();
-      if (!curHasSpace && valHasSpace) map[canonicalKey] = val;
-      else if (curHasSpace && valHasSpace && !curTitleCase && valTitleCase) map[canonicalKey] = val;
+  /* Filter CANONICAL_PROGRAMS yang ada di data */
+  var result = window.CANONICAL_PROGRAMS.filter(function(p) {
+    return found[_nk(p)];
+  });
+
+  /* Tambah program yang ada di data tapi tidak di canonical list */
+  Object.keys(found).forEach(function(k) {
+    if (!window.PROG_CANONICAL_MAP[k]) {
+      /* Tidak ada di canonical — tampilkan apa adanya dari data */
+      arr.forEach(function(val) {
+        if (window.normKey(val) === k && result.indexOf(val) < 0) {
+          result.push(String(val).trim());
+        }
+      });
     }
   });
 
-  return Object.values(map)
-    .filter(Boolean)
-    .sort(function(a,b) { return a.localeCompare(b); });
-}
+  return result;
+};
 
-/* ── dedupByNormKey: generik untuk staf dll ── */
+/* ═══════════════════════════════════════════════
+   STAF NORMALIZATION
+   26 staf canonical + alias mapping
+═══════════════════════════════════════════════ */
+
+/* 26 staf canonical */
+window.CANONICAL_STAF = [
+  'Apri','Boy','Delvi','Didi','Eni','Epin','Erika','Flori',
+  'Gen','Gusto','Jack','Jeri','Johan','Len','Misel','Nerdi',
+  'Patris','Rfl','Rik','Simon','Stanis','Stef','Tetik',
+  'Veli','Vino','Yos'
+];
+
+/* Alias staf: variasi penulisan → canonical lowercase key */
+window.STAF_ALIAS = {
+  'gens':  'gen',
+  'gen':   'gen',
+  'johan': 'johan',
+  'len':   'len',
+  'lEN':   'len',
+  'stef':  'stef',
+};
+
+/* Map: lowercase canonical → display name */
+window.STAF_CANONICAL_MAP = {};
+window.CANONICAL_STAF.forEach(function(s) {
+  window.STAF_CANONICAL_MAP[s.toLowerCase()] = s;
+});
+
+/* normStafKey: kembalikan lowercase canonical key */
+window.normStafKey = function(s) {
+  if (!s) return '';
+  var k = String(s).trim().toLowerCase().replace(/\s+/g, ' ');
+  return window.STAF_ALIAS[k] || k;
+};
+
+/* getStafDisplay: dari raw value → canonical display name */
+window.getStafDisplay = function(val) {
+  if (!val || !String(val).trim()) return null;
+  var k = window.normStafKey(val);
+  /* Cek canonical map */
+  if (window.STAF_CANONICAL_MAP[k]) return window.STAF_CANONICAL_MAP[k];
+  /* Fallback: Title Case */
+  var s = String(val).trim();
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+};
+
+/* dedupStaf: dari array raw values → list canonical display name */
+window.dedupStaf = function(arr) {
+  var found = {};
+  arr.forEach(function(val) {
+    if (!val || !String(val).trim()) return;
+    var k = window.normStafKey(val);
+    if (k && !found[k]) found[k] = window.getStafDisplay(val);
+  });
+
+  /* Urut sesuai CANONICAL_STAF dulu, sisanya append */
+  var result = window.CANONICAL_STAF.filter(function(s) {
+    return found[s.toLowerCase()];
+  });
+  Object.keys(found).forEach(function(k) {
+    if (!window.STAF_CANONICAL_MAP[k]) result.push(found[k]);
+  });
+  return result;
+};
+
+/* bestStafName: Title Case */
+window.bestStafName = function(name) {
+  if (!name) return '';
+  var s = String(name).trim();
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+};
+
+/* dedupByNormKey: generik */
 window.dedupByNormKey = function(arr, keyFn) {
   var map = {};
   arr.forEach(function(val) {
     if (!val || !String(val).trim()) return;
-    var k = keyFn(val);
-    if (!k) return;
-    if (!map[k]) {
-      map[k] = val;
-    } else {
+    var k = keyFn(val); if (!k) return;
+    if (!map[k]) map[k] = val;
+    else {
       var cur = map[k];
       var isCurTitle = cur === cur.charAt(0).toUpperCase() + cur.slice(1).toLowerCase();
       var isValTitle = val === val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
@@ -184,16 +294,7 @@ window.dedupByNormKey = function(arr, keyFn) {
     }
   });
   return Object.values(map).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
-}
-
-/* ── getStafDisplay: canonical display name untuk staf ── */
-window.getStafDisplay = function(val) {
-  if (!val || !String(val).trim()) return null;
-  var lower = String(val).trim().toLowerCase();
-  if (STAF_ALIAS[lower]) return STAF_ALIAS[lower];
-  var s = String(val).trim();
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-}
+};
 
 /* ── refreshDashFilters: update isi dropdown berdasarkan data yang sudah terfilter
    Cascading: tiap filter hanya tampilkan nilai yang ada di data hasil filter LAIN
@@ -251,14 +352,7 @@ function refreshDashFilters(skipId) {
     var fd2 = getFiltered('staf');
     var rawStaf = fd2.pjum.map(function(r){return r[P.staf];})
       .concat(fd2.benef.map(function(r){return r[B.staf];}));
-    var stafMap = {};
-    rawStaf.forEach(function(val) {
-      var k = normStafKey(val);
-      if (!k) return;
-      if (!stafMap[k]) stafMap[k] = getStafDisplay(val);
-    });
-    var allStaf = Object.values(stafMap).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
-    populateSel('dash-staf', allStaf);
+    populateSel('dash-staf', dedupStaf(rawStaf));
     document.getElementById('dash-staf').value = curStaf;
   }
 

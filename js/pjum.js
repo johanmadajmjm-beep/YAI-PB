@@ -92,12 +92,7 @@ function refreshPjumFilters(skipId) {
   /* Staf */
   if (skipId !== 'pf-staf') {
     var curS=v('pf-staf');
-    var sm={};
-    getFilteredPjum('staf').forEach(function(r){
-      var k=normStafKey(r[P.staf]);if(!k)return;
-      if(!sm[k]) sm[k]=getStafDisplay(r[P.staf]);
-    });
-    populateSel('pf-staf', Object.values(sm).filter(Boolean).sort(function(a,b){return a.localeCompare(b);}));
+    populateSel('pf-staf', dedupStaf(getFilteredPjum('staf').map(function(r){return r[P.staf];})));
     document.getElementById('pf-staf').value=curS;
   }
 
