@@ -1,33 +1,110 @@
 /* ═══════════════════════════════════════════════
-   pjum.js — PJUM page
+   pjum.js — PJUM page + cascading filter
 ═══════════════════════════════════════════════ */
 
 function buildPjumPage() {
-  var pjum = window.rawPjum;
-  var P = window.P;
+  populatePjumFilters(null);
 
-  populateSel('pf-proyek', uniqArr(pjum.map(function(r) { return r[P.proyek]; })));
-  populateSel('pf-staf',   uniqArr(pjum.map(function(r) { return r[P.staf]; })));
-  populateSel('pf-kode',   uniqArr(pjum.map(function(r) { return r[P.kode]; })));
-  populateSel('pf-tahun',  uniqArr(pjum.map(function(r) { return r[P.tgl] ? r[P.tgl].slice(0,4) : null; }).filter(Boolean)).reverse());
-  populateSel('pf-bulan',  ['01','02','03','04','05','06','07','08','09','10','11','12'], bulanName);
-
-  var fids = ['pf-proyek','pf-staf','pf-kode','pf-tahun','pf-bulan','pf-cari'];
+  var fids = ['pf-proyek','pf-staf','pf-kode','pf-tahun','pf-bulan'];
   fids.forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('change', applyPjumFilter);
-      el.addEventListener('input', applyPjumFilter);
-    }
+    if (el) el.addEventListener('change', function() {
+      refreshPjumFilters(id);
+      applyPjumFilter();
+    });
   });
 
-  var resetBtn = document.getElementById('pf-reset');
-  if (resetBtn) resetBtn.addEventListener('click', function() {
+  var cari = document.getElementById('pf-cari');
+  if (cari) cari.addEventListener('input', applyPjumFilter);
+
+  var rb = document.getElementById('pf-reset');
+  if (rb) rb.addEventListener('click', function() {
     fids.forEach(function(id) { var el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('pf-cari').value = '';
+    populatePjumFilters(null);
     applyPjumFilter();
   });
 
   applyPjumFilter();
+}
+
+/* ── getFilteredPjum: filter rawPjum, skip satu field ── */
+function getFilteredPjum(skipField) {
+  var P = window.P;
+  var proyek = skipField !== 'proyek' ? v('pf-proyek') : '';
+  var staf   = skipField !== 'staf'   ? v('pf-staf')   : '';
+  var kode   = skipField !== 'kode'   ? v('pf-kode')   : '';
+  var tahun  = skipField !== 'tahun'  ? v('pf-tahun')  : '';
+  var bulan  = skipField !== 'bulan'  ? v('pf-bulan')  : '';
+
+  return window.rawPjum.filter(function(r) {
+    if (proyek && r[P.proyek] !== proyek) return false;
+    if (staf   && r[P.staf]  !== staf)   return false;
+    if (kode   && r[P.kode]  !== kode)   return false;
+    var tglValid = validTgl(r[P.tgl]);
+    if (tahun === '__blank__' && tglValid) return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid) return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
+    return true;
+  });
+}
+
+/* ── refreshPjumFilters: update semua dropdown kecuali yang baru diubah ── */
+function refreshPjumFilters(skipId) {
+  var P = window.P;
+
+  var fields = {
+    'pf-proyek': { skip:'proyek', fn: function(d){ return uniqArr(d.map(function(r){return r[P.proyek];})); } },
+    'pf-staf':   { skip:'staf',   fn: function(d){ return uniqArr(d.map(function(r){return r[P.staf];})); } },
+    'pf-kode':   { skip:'kode',   fn: function(d){ return uniqArr(d.map(function(r){return r[P.kode];})); } },
+  };
+
+  Object.keys(fields).forEach(function(id) {
+    if (id === skipId) return;
+    var cur = v(id);
+    var d = getFilteredPjum(fields[id].skip);
+    populateSel(id, fields[id].fn(d));
+    document.getElementById(id).value = cur;
+  });
+
+  /* Tahun */
+  if (skipId !== 'pf-tahun') {
+    var cur = v('pf-tahun');
+    var d = getFilteredPjum('tahun');
+    var tahunSet = {}, hasBlanks = false;
+    d.forEach(function(r) {
+      var t = validTgl(r[P.tgl]);
+      if (t) tahunSet[t.slice(0,4)] = 1; else hasBlanks = true;
+    });
+    var allTahun = Object.keys(tahunSet).sort().reverse();
+    if (hasBlanks) allTahun.push('__blank__');
+    populateSel('pf-tahun', allTahun, function(val) {
+      return val === '__blank__' ? '(Tanggal Kosong)' : val;
+    });
+    document.getElementById('pf-tahun').value = cur;
+  }
+
+  /* Bulan */
+  if (skipId !== 'pf-bulan') {
+    var cur2 = v('pf-bulan');
+    var d2 = getFilteredPjum('bulan');
+    var bulanSet = {}, hasBlanks2 = false;
+    d2.forEach(function(r) {
+      var t = validTgl(r[P.tgl]);
+      if (t) bulanSet[t.slice(5,7)] = 1; else hasBlanks2 = true;
+    });
+    var allBulan = Object.keys(bulanSet).sort();
+    if (hasBlanks2) allBulan.push('__blank__');
+    populateSel('pf-bulan', allBulan, function(val) {
+      return val === '__blank__' ? '(Tanggal Kosong)' : bulanName(val);
+    });
+    document.getElementById('pf-bulan').value = cur2;
+  }
+}
+
+function populatePjumFilters(skipId) {
+  refreshPjumFilters(skipId);
 }
 
 function applyPjumFilter() {
@@ -43,8 +120,11 @@ function applyPjumFilter() {
     if (proyek && r[P.proyek] !== proyek) return false;
     if (staf   && r[P.staf]  !== staf)   return false;
     if (kode   && r[P.kode]  !== kode)   return false;
-    if (tahun  && !(r[P.tgl]||'').startsWith(tahun)) return false;
-    if (bulan  && (r[P.tgl]||'').slice(5,7) !== bulan) return false;
+    var tglValid = validTgl(r[P.tgl]);
+    if (tahun === '__blank__' && tglValid) return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid) return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
     if (cari && (r[P.kegiatan]||'').toLowerCase().indexOf(cari) < 0 &&
                (r[P.item]||'').toLowerCase().indexOf(cari) < 0 &&
                (r[P.staf]||'').toLowerCase().indexOf(cari) < 0) return false;
@@ -109,20 +189,18 @@ function renderPjumCharts() {
   mkBarH('pch-kegiatan', byKeg.map(function(x){return x[0];}), byKeg.map(function(x){return x[1];}),
     '#14B8A6', { label:'Biaya', yFmt:fmtShort });
 
-  /* Quick stats */
   var qs = document.getElementById('pjum-quick-stats');
   if (qs) {
     var items = [
       ['Rata-rata per Transaksi', d.length ? fmtShort(d.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0)/d.length) : '—'],
       ['Transaksi Terbesar', d.length ? fmtShort(Math.max.apply(null, d.map(function(r){return parseFloat(r[P.jumlah])||0;}))) : '—'],
       ['Program Terbanyak Biaya', byProyek[0] ? byProyek[0][0] : '—'],
-      ['Staf Terbanyak Biaya', byStaf[0] ? byStaf[0][0] : '—'],
+      ['Staf Terbanyak Biaya',    byStaf[0]   ? byStaf[0][0]   : '—'],
     ];
     qs.innerHTML = items.map(function(x) {
-      return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">' +
-        '<span style="color:var(--text2);font-size:13px">' + x[0] + '</span>' +
-        '<span style="font-weight:700;font-size:13px">' + x[1] + '</span>' +
-      '</div>';
+      return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="color:var(--text2);font-size:12px">'+x[0]+'</span>' +
+        '<span style="font-weight:700;font-size:12px">'+x[1]+'</span></div>';
     }).join('');
   }
 }
@@ -132,10 +210,9 @@ function renderDonutLegendPjum(id, entries, total) {
   if (!el) return;
   el.innerHTML = entries.map(function(x, i) {
     return '<div class="dl-item">' +
-      '<div class="dl-dot" style="background:' + PALETTE[i%PALETTE.length] + '"></div>' +
-      '<div class="dl-name">' + x[0] + '</div>' +
-      '<div class="dl-pct">' + (total ? (x[1]/total*100).toFixed(1) : 0) + '%</div>' +
-    '</div>';
+      '<div class="dl-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></div>' +
+      '<div class="dl-name">'+x[0]+'</div>' +
+      '<div class="dl-pct">'+(total?(x[1]/total*100).toFixed(1):0)+'%</div></div>';
   }).join('');
 }
 
@@ -157,7 +234,7 @@ function renderPjumTable() {
   var totalBiaya = rows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
 
   setEl('pjum-tbl-count', total.toLocaleString() + ' baris · ' + fmtShort(totalBiaya));
-  setEl('pjum-pg-info', (start+1).toLocaleString() + '–' + Math.min(start+window.APP.PG_SIZE,total).toLocaleString() + ' dari ' + total.toLocaleString());
+  setEl('pjum-pg-info', (start+1).toLocaleString()+'–'+Math.min(start+window.APP.PG_SIZE,total).toLocaleString()+' dari '+total.toLocaleString());
   var prevBtn = document.getElementById('pjum-pg-prev');
   var nextBtn = document.getElementById('pjum-pg-next');
   if (prevBtn) prevBtn.disabled = window.APP.pjum.page === 0;
@@ -165,23 +242,19 @@ function renderPjumTable() {
 
   var tbody = document.getElementById('pjum-tbl-body');
   if (!tbody) return;
-  if (!slice.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data</td></tr>';
-    return;
-  }
-  tbody.innerHTML = slice.map(function(r) {
+  tbody.innerHTML = slice.length ? slice.map(function(r) {
     return '<tr>' +
-      '<td class="mono">' + (r[P.tgl]||'—') + '</td>' +
-      '<td>' + (r[P.staf]||'—') + '</td>' +
-      '<td>' + (r[P.proyek]||'—') + '</td>' +
-      '<td class="mono">' + (r[P.kode]||'—') + '</td>' +
-      '<td>' + (r[P.kegiatan]||'—') + '</td>' +
-      '<td>' + (r[P.item]||'—') + '</td>' +
-      '<td>' + classifyItem(r[P.item]) + '</td>' +
-      '<td class="num">' + fmt(parseFloat(r[P.jumlah])||0) + '</td>' +
-      '<td class="mono" style="font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis" title="' + (r[P.file]||'') + '">' + (r[P.file]||'—') + '</td>' +
+      '<td class="mono">'+(r[P.tgl]||'—')+'</td>' +
+      '<td>'+(r[P.staf]||'—')+'</td>' +
+      '<td>'+(r[P.proyek]||'—')+'</td>' +
+      '<td class="mono">'+(r[P.kode]||'—')+'</td>' +
+      '<td>'+(r[P.kegiatan]||'—')+'</td>' +
+      '<td>'+(r[P.item]||'—')+'</td>' +
+      '<td>'+classifyItem(r[P.item])+'</td>' +
+      '<td class="num">'+fmt(parseFloat(r[P.jumlah])||0)+'</td>' +
+      '<td class="mono" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis" title="'+(r[P.file]||'')+'">'+(r[P.file]||'—')+'</td>' +
     '</tr>';
-  }).join('');
+  }).join('') : '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text3)">Tidak ada data</td></tr>';
 }
 
 window.changePjumPage = function(dir) {

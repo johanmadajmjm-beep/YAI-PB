@@ -1,38 +1,125 @@
 /* ═══════════════════════════════════════════════
-   benef.js — Beneficiary page
+   benef.js — Beneficiary page + cascading filter
 ═══════════════════════════════════════════════ */
 
 function buildBenefPage() {
-  var benef = window.rawBenef;
-  var B = window.B;
+  populateBenefFilters(null);
 
-  populateSel('bf-proyek',   uniqArr(benef.map(function(r) { return r[B.proyek]; })));
-  populateSel('bf-staf',     uniqArr(benef.map(function(r) { return r[B.staf]; })));
-  populateSel('bf-kategori', uniqArr(benef.map(function(r) { return r[B.kategori]; })));
-  populateSel('bf-kab',      uniqArr(benef.map(function(r) { return r[B.kab]; })));
-  populateSel('bf-kec',      uniqArr(benef.map(function(r) { return r[B.kec]; })));
-  populateSel('bf-disab',    uniqArr(benef.map(function(r) { return r[B.disab]; })));
-  populateSel('bf-tahun',    uniqArr(benef.map(function(r) { return r[B.tgl] ? r[B.tgl].slice(0,4) : null; }).filter(Boolean)).reverse());
-  populateSel('bf-bulan',    ['01','02','03','04','05','06','07','08','09','10','11','12'], bulanName);
-
-  var fids = ['bf-proyek','bf-staf','bf-kategori','bf-kab','bf-kec','bf-disab','bf-gender','bf-tahun','bf-bulan','bf-cari'];
+  var fids = ['bf-proyek','bf-staf','bf-kategori','bf-kab','bf-kec','bf-disab','bf-gender','bf-tahun','bf-bulan'];
   fids.forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) {
-      el.addEventListener('change', applyBenefFilter);
-      el.addEventListener('input', applyBenefFilter);
-    }
+    if (el) el.addEventListener('change', function() {
+      refreshBenefFilters(id);
+      applyBenefFilter();
+    });
   });
 
-  var resetBtn = document.getElementById('bf-reset');
-  if (resetBtn) resetBtn.addEventListener('click', function() {
+  var cari = document.getElementById('bf-cari');
+  if (cari) cari.addEventListener('input', applyBenefFilter);
+
+  var rb = document.getElementById('bf-reset');
+  if (rb) rb.addEventListener('click', function() {
     fids.forEach(function(id) { var el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('bf-cari').value = '';
+    populateBenefFilters(null);
     applyBenefFilter();
   });
 
   applyBenefFilter();
 }
 
+/* ── getFilteredBenef: filter rawBenef, skip satu field ── */
+function getFilteredBenef(skipField) {
+  var B = window.B;
+  var proyek   = skipField !== 'proyek'   ? v('bf-proyek')   : '';
+  var staf     = skipField !== 'staf'     ? v('bf-staf')     : '';
+  var kategori = skipField !== 'kategori' ? v('bf-kategori') : '';
+  var kab      = skipField !== 'kab'      ? v('bf-kab')      : '';
+  var kec      = skipField !== 'kec'      ? v('bf-kec')      : '';
+  var disab    = skipField !== 'disab'    ? v('bf-disab')    : '';
+  var gender   = skipField !== 'gender'   ? v('bf-gender')   : '';
+  var tahun    = skipField !== 'tahun'    ? v('bf-tahun')    : '';
+  var bulan    = skipField !== 'bulan'    ? v('bf-bulan')    : '';
+
+  return window.rawBenef.filter(function(r) {
+    if (proyek   && r[B.proyek]   !== proyek)   return false;
+    if (staf     && r[B.staf]     !== staf)     return false;
+    if (kategori && r[B.kategori] !== kategori) return false;
+    if (kab      && r[B.kab]      !== kab)      return false;
+    if (kec      && r[B.kec]      !== kec)      return false;
+    if (disab    && r[B.disab]    !== disab)    return false;
+    if (gender   && r[B.gender]   !== gender)   return false;
+    var tglValid = validTgl(r[B.tgl]);
+    if (tahun === '__blank__' && tglValid)  return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid)  return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
+    return true;
+  });
+}
+
+/* ── refreshBenefFilters: update semua dropdown kecuali yang baru diubah ── */
+function refreshBenefFilters(skipId) {
+  var B = window.B;
+  var fields = {
+    'bf-proyek':   { skip:'proyek',   fn: function(d){ return uniqArr(d.map(function(r){return r[B.proyek];})); } },
+    'bf-staf':     { skip:'staf',     fn: function(d){ return uniqArr(d.map(function(r){return r[B.staf];})); } },
+    'bf-kategori': { skip:'kategori', fn: function(d){ return uniqArr(d.map(function(r){return r[B.kategori];})); } },
+    'bf-kab':      { skip:'kab',      fn: function(d){ return uniqArr(d.map(function(r){return r[B.kab];})); } },
+    'bf-kec':      { skip:'kec',      fn: function(d){ return uniqArr(d.map(function(r){return r[B.kec];})); } },
+    'bf-disab':    { skip:'disab',    fn: function(d){ return uniqArr(d.map(function(r){return r[B.disab];})); } },
+  };
+
+  Object.keys(fields).forEach(function(id) {
+    if (id === skipId) return;
+    var cur = v(id);
+    var d = getFilteredBenef(fields[id].skip);
+    populateSel(id, fields[id].fn(d));
+    document.getElementById(id).value = cur;
+  });
+
+  /* Tahun */
+  if (skipId !== 'bf-tahun') {
+    var cur = v('bf-tahun');
+    var d = getFilteredBenef('tahun');
+    var tahunSet = {}, hasBlanks = false;
+    d.forEach(function(r) {
+      var t = validTgl(r[B.tgl]);
+      if (t) tahunSet[t.slice(0,4)] = 1; else hasBlanks = true;
+    });
+    var allTahun = Object.keys(tahunSet).sort().reverse();
+    if (hasBlanks) allTahun.push('__blank__');
+    populateSel('bf-tahun', allTahun, function(val) {
+      return val === '__blank__' ? '(Tanggal Kosong)' : val;
+    });
+    document.getElementById('bf-tahun').value = cur;
+  }
+
+  /* Bulan */
+  if (skipId !== 'bf-bulan') {
+    var cur2 = v('bf-bulan');
+    var d2 = getFilteredBenef('bulan');
+    var bulanSet = {}, hasBlanks2 = false;
+    d2.forEach(function(r) {
+      var t = validTgl(r[B.tgl]);
+      if (t) bulanSet[t.slice(5,7)] = 1; else hasBlanks2 = true;
+    });
+    var allBulan = Object.keys(bulanSet).sort();
+    if (hasBlanks2) allBulan.push('__blank__');
+    populateSel('bf-bulan', allBulan, function(val) {
+      return val === '__blank__' ? '(Tanggal Kosong)' : bulanName(val);
+    });
+    document.getElementById('bf-bulan').value = cur2;
+  }
+}
+
+/* ── populateBenefFilters: isi awal semua filter ── */
+function populateBenefFilters(skipId) {
+  refreshBenefFilters(skipId);
+  /* Gender tidak cascading — selalu L/P/Semua */
+}
+
+/* ── applyBenefFilter: filter + render ── */
 function applyBenefFilter() {
   var B = window.B;
   var proyek   = v('bf-proyek');
@@ -54,8 +141,11 @@ function applyBenefFilter() {
     if (kec      && r[B.kec]      !== kec)      return false;
     if (disab    && r[B.disab]    !== disab)    return false;
     if (gender   && r[B.gender]   !== gender)   return false;
-    if (tahun    && !(r[B.tgl] || '').startsWith(tahun)) return false;
-    if (bulan    && (r[B.tgl] || '').slice(5,7) !== bulan) return false;
+    var tglValid = validTgl(r[B.tgl]);
+    if (tahun === '__blank__' && tglValid)  return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    if (bulan === '__blank__' && tglValid)  return false;
+    if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
     if (cari && (r[B.nama]||'').toLowerCase().indexOf(cari) < 0 &&
                (r[B.desa]||'').toLowerCase().indexOf(cari) < 0 &&
                (r[B.kegiatan]||'').toLowerCase().indexOf(cari) < 0) return false;
@@ -74,15 +164,13 @@ function renderBenefStats() {
   var total = d.length;
   var uniqSet = {};
   d.forEach(function(r) { uniqSet[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')] = 1; });
-  var uniq  = Object.keys(uniqSet).length;
   var gL    = d.filter(function(r) { return r[B.gender] === 'L'; }).length;
   var gP    = d.filter(function(r) { return r[B.gender] === 'P'; }).length;
   var desaS = {}; d.forEach(function(r) { if(r[B.desa]) desaS[r[B.desa]] = 1; });
   var progS = {}; d.forEach(function(r) { if(r[B.proyek]) progS[r[B.proyek]] = 1; });
 
-  setCard('bstat-total', total.toLocaleString('id-ID'), uniq.toLocaleString() + ' unik (nama+desa)');
-  setCard('bstat-lp',    gL.toLocaleString() + ' / ' + gP.toLocaleString(),
-    (total ? (gP/total*100).toFixed(1) : 0) + '% perempuan');
+  setCard('bstat-total', total.toLocaleString('id-ID'), Object.keys(uniqSet).length.toLocaleString() + ' unik (nama+desa)');
+  setCard('bstat-lp',    gL.toLocaleString() + ' / ' + gP.toLocaleString(), (total ? (gP/total*100).toFixed(1) : 0) + '% perempuan');
   setCard('bstat-desa',  Object.keys(desaS).length.toLocaleString(), 'desa/kelurahan tercakup');
   setCard('bstat-prog',  Object.keys(progS).length.toLocaleString(), 'program aktif');
 }
@@ -102,15 +190,12 @@ function renderBenefCharts() {
   var gColors = { 'Laki-laki':'#4F8EF7', 'Perempuan':'#EF4444', 'Tidak Diisi':'#8A96B8' };
   var gColArr = gKeys.map(function(k) { return gColors[k] || '#8A96B8'; });
   mkDonut('bch-gender', gKeys, gKeys.map(function(k) { return byGender[k]; }), gColArr);
-  /* Gender legend */
-  var gTotal = gKeys.reduce(function(s,k){return s+byGender[k];},0)||1;
+  var gTotal = d.length || 1;
   var gLegEl = document.getElementById('bch-gender-legend');
   if (gLegEl) gLegEl.innerHTML = gKeys.map(function(k,i) {
-    return '<div class="dl-item">' +
-      '<div class="dl-dot" style="background:'+gColArr[i]+'"></div>' +
+    return '<div class="dl-item"><div class="dl-dot" style="background:'+gColArr[i]+'"></div>' +
       '<div class="dl-name">'+k+'</div>' +
-      '<div class="dl-pct">'+(byGender[k]/gTotal*100).toFixed(1)+'% ('+byGender[k].toLocaleString()+')</div>' +
-    '</div>';
+      '<div class="dl-pct">'+(byGender[k]/gTotal*100).toFixed(1)+'% ('+byGender[k].toLocaleString()+')</div></div>';
   }).join('');
 
   var byKat = topN(groupCount(d, function(r) { return r[B.kategori]; }), 10);
@@ -162,11 +247,7 @@ function renderBenefTable() {
 
   var tbody = document.getElementById('benef-tbl-body');
   if (!tbody) return;
-  if (!slice.length) {
-    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:32px;color:var(--text3)">Tidak ada data</td></tr>';
-    return;
-  }
-  tbody.innerHTML = slice.map(function(r) {
+  tbody.innerHTML = slice.length ? slice.map(function(r) {
     return '<tr>' +
       '<td>' + (r[B.nama]||'—') + '</td>' +
       '<td><span class="badge badge-' + r[B.gender] + '">' + (r[B.gender]||'—') + '</span></td>' +
@@ -183,7 +264,7 @@ function renderBenefTable() {
       '<td class="mono">' + (r[B.tgl]||'—') + '</td>' +
       '<td class="mono">' + (r[B.kode]||'—') + '</td>' +
     '</tr>';
-  }).join('');
+  }).join('') : '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--text3)">Tidak ada data</td></tr>';
 }
 
 window.changeBenefPage = function(dir) {

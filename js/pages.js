@@ -6,21 +6,62 @@
    WILAYAH
 ══════════════════════════════════════════════ */
 function buildWilayahPage() {
-  var benef = window.rawBenef;
-  var B = window.B;
-  populateSel('wf-proyek', uniqArr(benef.map(function(r) { return r[B.proyek]; })));
-  populateSel('wf-tahun',  uniqArr(benef.map(function(r) { return r[B.tgl] ? r[B.tgl].slice(0,4) : null; }).filter(Boolean)).reverse());
+  refreshWilayahFilters(null);
   var fids = ['wf-proyek','wf-tahun'];
   fids.forEach(function(id) {
     var el = document.getElementById(id);
-    if (el) el.addEventListener('change', applyWilayahFilter);
+    if (el) el.addEventListener('change', function() {
+      refreshWilayahFilters(id);
+      applyWilayahFilter();
+    });
   });
   var rb = document.getElementById('wf-reset');
   if (rb) rb.addEventListener('click', function() {
     fids.forEach(function(id) { var el = document.getElementById(id); if(el) el.value = ''; });
+    refreshWilayahFilters(null);
     applyWilayahFilter();
   });
   applyWilayahFilter();
+}
+
+function getFilteredWilayah(skipField) {
+  var B = window.B;
+  var proyek = skipField !== 'proyek' ? v('wf-proyek') : '';
+  var tahun  = skipField !== 'tahun'  ? v('wf-tahun')  : '';
+  return window.rawBenef.filter(function(r) {
+    if (proyek && r[B.proyek] !== proyek) return false;
+    var tglValid = validTgl(r[B.tgl]);
+    if (tahun === '__blank__' && tglValid) return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
+    return true;
+  });
+}
+
+function refreshWilayahFilters(skipId) {
+  var B = window.B;
+
+  if (skipId !== 'wf-proyek') {
+    var cur = v('wf-proyek');
+    var d = getFilteredWilayah('proyek');
+    populateSel('wf-proyek', uniqArr(d.map(function(r){return r[B.proyek];})));
+    document.getElementById('wf-proyek').value = cur;
+  }
+
+  if (skipId !== 'wf-tahun') {
+    var cur2 = v('wf-tahun');
+    var d2 = getFilteredWilayah('tahun');
+    var tahunSet = {}, hasBlanks = false;
+    d2.forEach(function(r) {
+      var t = validTgl(r[B.tgl]);
+      if (t) tahunSet[t.slice(0,4)] = 1; else hasBlanks = true;
+    });
+    var allTahun = Object.keys(tahunSet).sort().reverse();
+    if (hasBlanks) allTahun.push('__blank__');
+    populateSel('wf-tahun', allTahun, function(val) {
+      return val === '__blank__' ? '(Tanggal Kosong)' : val;
+    });
+    document.getElementById('wf-tahun').value = cur2;
+  }
 }
 
 function applyWilayahFilter() {
@@ -29,7 +70,9 @@ function applyWilayahFilter() {
   var tahun  = v('wf-tahun');
   window.APP.wilayah.filtered = window.rawBenef.filter(function(r) {
     if (proyek && r[B.proyek] !== proyek) return false;
-    if (tahun  && !(r[B.tgl]||'').startsWith(tahun)) return false;
+    var tglValid = validTgl(r[B.tgl]);
+    if (tahun === '__blank__' && tglValid) return false;
+    if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
     return true;
   });
   window.APP.wilayah.page = 0;
