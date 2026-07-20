@@ -580,20 +580,37 @@ function buildLaporanPage() {
 /* Boot */
 async function boot() {
   updateTopbarDate();
-  try {
-    await fetchRawData();
-    buildAll();
-  } catch(e) {
-    console.error('Boot error:', e);
-    var lo = document.getElementById('loading-overlay');
-    if (lo) lo.innerHTML =
-      '<div style="text-align:center;color:#EF4444">' +
-      '<div style="font-size:32px;margin-bottom:12px">⚠️</div>' +
-      '<div style="font-size:15px;font-weight:700">Gagal memuat data</div>' +
-      '<div style="font-size:13px;color:#8A96B8;margin-top:8px">Cek koneksi atau GAS endpoint</div>' +
-      '<button onclick="location.reload()" style="margin-top:16px;padding:8px 20px;border-radius:8px;background:#F97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700">Coba Lagi</button>' +
-      '</div>';
+  var maxRetry = 3;
+  for (var i = 0; i < maxRetry; i++) {
+    try {
+      if (i > 0) {
+        var lo = document.getElementById('loading-overlay');
+        if (lo) lo.innerHTML =
+          '<div style="text-align:center;color:var(--text2)">' +
+          '<div style="font-size:28px;margin-bottom:12px">⏳</div>' +
+          '<div style="font-size:15px;font-weight:700;color:var(--text1)">Memuat data...</div>' +
+          '<div style="font-size:13px;color:var(--text2);margin-top:8px">Percobaan ' + (i+1) + ' dari ' + maxRetry + '</div>' +
+          '</div>';
+      }
+      await fetchRawData();
+      buildAll();
+      return;
+    } catch(e) {
+      console.warn('Boot attempt ' + (i+1) + ' gagal:', e);
+      if (i < maxRetry - 1) {
+        await new Promise(function(r){ setTimeout(r, 3000); });
+      }
+    }
   }
+  /* Semua retry gagal */
+  var lo = document.getElementById('loading-overlay');
+  if (lo) lo.innerHTML =
+    '<div style="text-align:center;color:#EF4444">' +
+    '<div style="font-size:32px;margin-bottom:12px">⚠️</div>' +
+    '<div style="font-size:15px;font-weight:700">Gagal memuat data</div>' +
+    '<div style="font-size:13px;color:#8A96B8;margin-top:8px">Cek koneksi atau GAS endpoint</div>' +
+    '<button onclick="location.reload()" style="margin-top:16px;padding:8px 20px;border-radius:8px;background:#F97316;color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700">Coba Lagi</button>' +
+    '</div>';
 }
 
 boot();
