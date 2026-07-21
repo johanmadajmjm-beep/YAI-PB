@@ -513,10 +513,10 @@ function buildLaporanPage() {
       '<span style="font-weight:700;font-size:13px">'+x[1]+'</span></div>';
   }).join('');
 
-  var allProgS = {};
-  pjum.forEach(function(r){if(r[P.proyek])allProgS[r[P.proyek]]=1;});
-  benef.forEach(function(r){if(r[B.proyek])allProgS[r[B.proyek]]=1;});
-  var allProg = Object.keys(allProgS).sort();
+  var allProgMap = {};
+  pjum.forEach(function(r){if(r[P.proyek]) allProgMap[r[P.proyek].trim().toLowerCase()] = r[P.proyek].trim();});
+  benef.forEach(function(r){if(r[B.proyek]) allProgMap[r[B.proyek].trim().toLowerCase()] = r[B.proyek].trim();});
+  var allProg = Object.values(allProgMap).sort();
 
   /* KPI Summary */
   var kpiEl = document.getElementById('laporan-kpi-grid');
@@ -537,8 +537,8 @@ function buildLaporanPage() {
   /* Tabel per program */
   var tbody = document.getElementById('laporan-prog-body');
   if (tbody) tbody.innerHTML = allProg.map(function(prog, i) {
-    var pRows  = pjum.filter(function(r){return r[P.proyek]===prog;});
-    var bRows  = benef.filter(function(r){return r[B.proyek]===prog;});
+    var pRows  = pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
+    var bRows  = benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
     var cost   = pRows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     var bTotal = bRows.length;
     var bUniqS = {};
@@ -557,15 +557,16 @@ function buildLaporanPage() {
   }).join('');
   setEl('laporan-prog-count', allProg.length + ' program');
 
-  /* Tabel per staf */
-  var allStafS = {};
-  pjum.forEach(function(r){if(r[P.staf]) allStafS[r[P.staf]]=1;});
-  benef.forEach(function(r){if(r[B.staf]) allStafS[r[B.staf]]=1;});
-  var allStaf = Object.keys(allStafS).sort();
+  /* Tabel per staf — group by lowercase supaya tidak double */
+  var allStafMap = {};
+  pjum.forEach(function(r){if(r[P.staf]) allStafMap[r[P.staf].trim().toLowerCase()] = r[P.staf].trim();});
+  benef.forEach(function(r){if(r[B.staf]) allStafMap[r[B.staf].trim().toLowerCase()] = r[B.staf].trim();});
+  var allStaf = Object.values(allStafMap).sort();
   var stafTbody = document.getElementById('laporan-staf-body');
   if (stafTbody) stafTbody.innerHTML = allStaf.map(function(staf, i) {
-    var pRowsS  = pjum.filter(function(r){return r[P.staf]===staf;});
-    var bRowsS  = benef.filter(function(r){return r[B.staf]===staf;});
+    var k = staf.trim().toLowerCase();
+    var pRowsS  = pjum.filter(function(r){return (r[P.staf]||'').trim().toLowerCase()===k;});
+    var bRowsS  = benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
     var costS   = pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     return '<tr>' +
       '<td>'+(i+1)+'</td>' +
@@ -574,8 +575,7 @@ function buildLaporanPage() {
       '<td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(bRowsS.length>0?bRowsS.length.toLocaleString():'—')+'</td>' +
     '</tr>';
-  }).join('');
-}
+  }).join('');}
 
 /* Boot */
 async function boot() {

@@ -119,7 +119,7 @@ async function fetchRawData(force) {
   var pjum = d.pjum || [];
   pjum.forEach(function(row) {
     row[window.P.kode]     = sanitizeStr(row[window.P.kode]);
-    row[window.P.proyek]   = sanitizeStr(row[window.P.proyek]);
+    row[window.P.proyek]   = normProgram(row[window.P.proyek]);
     row[window.P.staf]     = normStaf(row[window.P.staf]);
     row[window.P.kegiatan] = normText(row[window.P.kegiatan]);
     row[window.P.item]     = sanitizeStr(row[window.P.item]);
@@ -142,7 +142,7 @@ async function fetchRawData(force) {
     row[window.B.disab]    = normText(row[window.B.disab]);
     row[window.B.kegiatan] = normText(row[window.B.kegiatan]);
     row[window.B.benefit]  = normText(row[window.B.benefit]);
-    row[window.B.proyek]   = sanitizeStr(row[window.B.proyek]);
+    row[window.B.proyek]   = normProgram(row[window.B.proyek]);
     row[window.B.staf]     = normStaf(row[window.B.staf]);
     row[window.B.kode]     = sanitizeStr(row[window.B.kode]);
     row[window.B.instansi] = normText(row[window.B.instansi]);
