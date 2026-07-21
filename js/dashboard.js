@@ -27,12 +27,12 @@ function buildDashboard() {
   });
   var uniqBenef = Object.keys(uniqBSet).length;
 
-  setEl('kpi-benef', totalBenef.toLocaleString('id-ID'));
+  setEl('kpi-benef', uniqBenef.toLocaleString('id-ID'));
   setEl('kpi-pjum',  totalPjum.toLocaleString('id-ID'));
   setEl('kpi-desa',  totalDesa.toLocaleString('id-ID'));
   setEl('kpi-kab',   totalKab + ' Kabupaten');
   setEl('kpi-biaya', fmtShort(totalCost));
-  setEl('kpi-uniq',  uniqBenef.toLocaleString('id-ID') + ' unik');
+  setEl('kpi-uniq',  totalBenef.toLocaleString('id-ID') + ' total');
 
   /* ── Trend Benef per Bulan ── */
   var benefByBulan = sortedBulan(groupCount(benef, function(r) { return validTgl(r[B.tgl]); }));

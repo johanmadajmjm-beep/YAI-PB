@@ -182,7 +182,7 @@ function renderBenefStats() {
   var desaS = {}; d.forEach(function(r){if(r[B.desa]) desaS[r[B.desa]]=1;});
   var progS = {}; d.forEach(function(r){if(r[B.proyek]) progS[r[B.proyek]]=1;});
 
-  setCard('bstat-total', total.toLocaleString('id-ID'), Object.keys(uniqSet).length.toLocaleString()+' unik (nama+desa)');
+  setCard('bstat-total', Object.keys(uniqSet).length.toLocaleString(), total.toLocaleString('id-ID')+' total records');
   setCard('bstat-lp',    gL.toLocaleString()+' / '+gP.toLocaleString(), (total?(gP/total*100).toFixed(1):0)+'% perempuan');
   setCard('bstat-desa',  Object.keys(desaS).length.toLocaleString(), 'desa/kelurahan tercakup');
   setCard('bstat-prog',  Object.keys(progS).length.toLocaleString(), 'program aktif');
