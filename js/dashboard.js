@@ -10,7 +10,8 @@ function buildDashboard() {
   var P = window.P, B = window.B;
 
   /* ── KPI Cards ── */
-  var totalBenef = benef.length;
+  var uniqBenef = countUniqBenef(benef);
+  var totalRows = benef.length;
   var fileSet = {};
   pjum.forEach(function(r) { if(r[P.file]) fileSet[r[P.file]] = 1; });
   var totalPjum = Object.keys(fileSet).length;
@@ -21,21 +22,16 @@ function buildDashboard() {
   var kabSet = {};
   benef.forEach(function(r) { if(r[B.kab]) kabSet[r[B.kab]] = 1; });
   var totalKab = Object.keys(kabSet).length;
-  var uniqBSet = {};
-  benef.forEach(function(r) {
-    uniqBSet[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')] = 1;
-  });
-  var uniqBenef = Object.keys(uniqBSet).length;
 
   setEl('kpi-benef', uniqBenef.toLocaleString('id-ID'));
   setEl('kpi-pjum',  totalPjum.toLocaleString('id-ID'));
   setEl('kpi-desa',  totalDesa.toLocaleString('id-ID'));
   setEl('kpi-kab',   totalKab + ' Kabupaten');
   setEl('kpi-biaya', fmtShort(totalCost));
-  setEl('kpi-uniq',  totalBenef.toLocaleString('id-ID') + ' total');
+  setEl('kpi-uniq',  totalRows.toLocaleString('id-ID') + ' total records');
 
-  /* ── Trend Benef per Bulan ── */
-  var benefByBulan = sortedBulan(groupCount(benef, function(r) { return validTgl(r[B.tgl]); }));
+  /* ── Trend Benef per Bulan (unique per bulan) ── */
+  var benefByBulan = sortedBulan(groupCountUniq(benef, function(r) { return validTgl(r[B.tgl]); }));
 
   var noTglEl = document.getElementById('ch-dash-benef-trend-notgl');
   var wrapEl  = document.getElementById('ch-dash-benef-trend') ? document.getElementById('ch-dash-benef-trend').parentElement : null;
@@ -57,18 +53,18 @@ function buildDashboard() {
       '#F97316',{label:'Beneficiary',noLegend:true});
   }
 
-  /* ── Distribusi Jenis Benef (donut) ── */
-  var katData  = topN(groupCount(benef, function(r) { return r[B.kategori]; }), 6);
+  /* ── Distribusi Jenis Benef (donut) — unique per kategori ── */
+  var katData  = topN(groupCountUniq(benef, function(r) { return r[B.kategori]; }), 6);
   var katTotal = katData.reduce(function(s, x) { return s + x[1]; }, 0);
   mkDonut('ch-dash-benef-donut',
     katData.map(function(x) { return x[0]; }),
     katData.map(function(x) { return x[1]; }));
-  setEl('donut-center-val', totalBenef.toLocaleString());
-  setEl('donut-center-lbl', 'Total');
+  setEl('donut-center-val', uniqBenef.toLocaleString());
+  setEl('donut-center-lbl', 'Unik');
   renderDonutLegend('donut-legend', katData, katTotal);
 
-  /* ── Benef per Kabupaten ── */
-  var kabData = topN(groupCount(benef, function(r) { return r[B.kab]; }), 8);
+  /* ── Benef per Kabupaten — unique per kab ── */
+  var kabData = topN(groupCountUniq(benef, function(r) { return r[B.kab]; }), 8);
   var kabMax  = kabData[0] ? kabData[0][1] : 1;
   renderRankList('rank-kab', kabData, kabMax, function(v) { return v.toLocaleString(); }, false);
 
@@ -98,19 +94,18 @@ function buildDashboard() {
       '#F97316',{label:'Pengeluaran',yFmt:fmtShort,noLegend:true});
   }
 
-  /* ── Top Jenis Kegiatan ── */
-  var kegData  = topN(groupCount(benef, function(r) { return r[B.kegiatan]; }), 5);
+  /* ── Top Jenis Kegiatan — unique per kegiatan ── */
+  var kegData  = topN(groupCountUniq(benef, function(r) { return r[B.kegiatan]; }), 5);
   var kegMax   = kegData[0] ? kegData[0][1] : 1;
-  var kegTotal = benef.length || 1;
   renderRankList('rank-kegiatan', kegData, kegMax, function(v) {
-    return v.toLocaleString() + ' (' + (v/kegTotal*100).toFixed(1) + '%)';
+    return v.toLocaleString() + ' (' + (uniqBenef?(v/uniqBenef*100).toFixed(1):0) + '%)';
   }, true);
 
-  /* ── Top Benefit Diterima ── */
-  var benData = topN(groupCount(benef, function(r) { return r[B.benefit] || r[B.kegiatan]; }), 5);
+  /* ── Top Benefit Diterima — unique per benefit ── */
+  var benData = topN(groupCountUniq(benef, function(r) { return r[B.benefit] || r[B.kegiatan]; }), 5);
   var benMax  = benData[0] ? benData[0][1] : 1;
   renderRankList('rank-benefit', benData, benMax, function(v) {
-    return v.toLocaleString() + ' (' + (v/kegTotal*100).toFixed(1) + '%)';
+    return v.toLocaleString() + ' (' + (uniqBenef?(v/uniqBenef*100).toFixed(1):0) + '%)';
   }, true);
 
   /* ── AI Insight ── */
@@ -119,9 +114,10 @@ function buildDashboard() {
 
 function buildAiInsight(benef, pjum) {
   var B = window.B, P = window.P;
-  var kabData   = topN(groupCount(benef, function(r) { return r[B.kab]; }), 1);
+  var uniqTotal = countUniqBenef(benef);
+  var kabData   = topN(groupCountUniq(benef, function(r) { return r[B.kab]; }), 1);
   var topKab    = kabData[0] ? kabData[0][0] : '—';
-  var topKabPct = benef.length ? ((kabData[0]?kabData[0][1]:0) / benef.length * 100).toFixed(1) : '0';
+  var topKabPct = uniqTotal ? ((kabData[0]?kabData[0][1]:0) / uniqTotal * 100).toFixed(1) : '0';
   var pjumBulan = sortedBulan(groupSum(pjum,
     function(r) { return validTgl(r[P.tgl]); },
     function(r) { return r[P.jumlah]; }
@@ -131,7 +127,7 @@ function buildAiInsight(benef, pjum) {
   }, ['—', 0]);
   var tbp      = (topBulanCost[0]||'-').split('-');
   var topBulan = tbp[1] ? bulanFull(tbp[1]) + ' ' + tbp[0] : '—';
-  var kegData  = topN(groupCount(benef, function(r) { return r[B.kegiatan]; }), 1);
+  var kegData  = topN(groupCountUniq(benef, function(r) { return r[B.kegiatan]; }), 1);
   var topKeg   = kegData[0] ? kegData[0][0] : '—';
 
   setEl('ai-insight-text',

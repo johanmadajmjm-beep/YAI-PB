@@ -83,59 +83,58 @@ function renderWilayahAll() {
   var B = window.B;
   var d = window.APP.wilayah.filtered;
 
-  /* ─ KPI ─ */
+  /* ─ KPI — unique counts ─ */
   var kabS={}, kecS={}, desaS={};
   d.forEach(function(r) {
     if(r[B.kab])  kabS[r[B.kab]]  = 1;
     if(r[B.kec])  kecS[r[B.kec]]  = 1;
     if(r[B.desa]) desaS[r[B.desa]] = 1;
   });
+  var uniqTotal = countUniqBenef(d);
   setEl('wstat-kab',  Object.keys(kabS).length.toLocaleString());
   setEl('wstat-kec',  Object.keys(kecS).length.toLocaleString());
   setEl('wstat-desa', Object.keys(desaS).length.toLocaleString());
-  setEl('wstat-tot',  d.length.toLocaleString());
+  setEl('wstat-tot',  uniqTotal.toLocaleString());
 
-  /* ─ Charts ─ */
-  var byKab = topN(groupCount(d, function(r){return r[B.kab];}), 15);
+  /* ─ Charts — unique per group ─ */
+  var byKab = topN(groupCountUniq(d, function(r){return r[B.kab];}), 15);
   mkBarH('wch-kab', byKab.map(function(x){return x[0];}), byKab.map(function(x){return x[1];}),
-    byKab.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Benef'});
+    byKab.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Benef Unik'});
 
-  var byKec = topN(groupCount(d, function(r){return r[B.kec];}), 15);
+  var byKec = topN(groupCountUniq(d, function(r){return r[B.kec];}), 15);
   mkBarH('wch-kec', byKec.map(function(x){return x[0];}), byKec.map(function(x){return x[1];}),
-    '#F97316', {label:'Benef'});
+    '#F97316', {label:'Benef Unik'});
 
-  var byDesa = topN(groupCount(d, function(r){return r[B.desa];}), 15);
+  var byDesa = topN(groupCountUniq(d, function(r){return r[B.desa];}), 15);
   mkBarH('wch-desa', byDesa.map(function(x){return x[0];}), byDesa.map(function(x){return x[1];}),
-    '#8B5CF6', {label:'Benef'});
+    '#8B5CF6', {label:'Benef Unik'});
 
-  /* ─ Tambahan: benef per program di wilayah ini ─ */
-  var byProg = topN(groupCount(d, function(r){return r[B.proyek];}), 10);
+  var byProg = topN(groupCountUniq(d, function(r){return r[B.proyek];}), 10);
   mkBarH('wch-prog', byProg.map(function(x){return x[0];}), byProg.map(function(x){return x[1];}),
-    '#22C55E', {label:'Benef'});
+    '#22C55E', {label:'Benef Unik'});
 
-  /* ─ Donut gender wilayah ─ */
+  /* ─ Donut gender wilayah — unique ─ */
   var gMap = {'L':'Laki-laki','P':'Perempuan','—':'Lainnya'};
-  var byG  = groupCount(d, function(r){return gMap[r[B.gender]]||'Lainnya';});
+  var byG  = groupCountUniq(d, function(r){return gMap[r[B.gender]]||'Lainnya';});
   var gKeys = Object.keys(byG);
   var gCol  = {'Laki-laki':'#4F8EF7','Perempuan':'#EF4444','Lainnya':'#8A96B8'};
   mkDonut('wch-gender', gKeys, gKeys.map(function(k){return byG[k];}),
     gKeys.map(function(k){return gCol[k]||'#8A96B8';}));
-  var gTotal = d.length || 1;
   var wgLeg = document.getElementById('wch-gender-legend');
   if (wgLeg) wgLeg.innerHTML = gKeys.map(function(k,i) {
     return '<div class="dl-item"><div class="dl-dot" style="background:'+(gCol[k]||PALETTE[i])+'"></div>' +
       '<div class="dl-name">'+k+'</div>' +
-      '<div class="dl-pct">'+(byG[k]/gTotal*100).toFixed(1)+'%</div></div>';
+      '<div class="dl-pct">'+(uniqTotal?(byG[k]/uniqTotal*100).toFixed(1):0)+'%</div></div>';
   }).join('');
 
-  /* ─ Tabel ─ */
+  /* ─ Tabel — unique per desa ─ */
   renderWilayahTable();
 }
 
 function renderWilayahTable() {
   var B = window.B;
   var d = window.APP.wilayah.filtered;
-  var byDesa    = topN(groupCount(d, function(r){return r[B.desa];}), 200);
+  var byDesa    = topN(groupCountUniq(d, function(r){return r[B.desa];}), 200);
   var desaTotal = byDesa.reduce(function(s,x){return s+x[1];},0)||1;
   var start = window.APP.wilayah.page * 20;
   var slice = byDesa.slice(start, start+20);
@@ -207,19 +206,25 @@ function renderAnalitikCharts() {
   });
   mkMultiBar('ach-pjum-stacked', bLabels, stackedDS, {yFmt:fmtShort, stacked:true});
 
-  /* 2. Rasio gender per program */
+  /* 2. Rasio gender per program — unique per program+gender */
   var bProgSet={};
   benef.forEach(function(r){if(r[B.proyek]) bProgSet[r[B.proyek]]=1;});
   var progList = Object.keys(bProgSet).slice(0,10);
-  var lData = progList.map(function(p){return benef.filter(function(r){return r[B.proyek]===p&&r[B.gender]==='L';}).length;});
-  var pData = progList.map(function(p){return benef.filter(function(r){return r[B.proyek]===p&&r[B.gender]==='P';}).length;});
+  var lData = progList.map(function(p){
+    var rows = benef.filter(function(r){return r[B.proyek]===p&&r[B.gender]==='L';});
+    return countUniqBenef(rows);
+  });
+  var pData = progList.map(function(p){
+    var rows = benef.filter(function(r){return r[B.proyek]===p&&r[B.gender]==='P';});
+    return countUniqBenef(rows);
+  });
   mkMultiBar('ach-gender-prog', progList, [
     {label:'Laki-laki', data:lData, backgroundColor:'#4F8EF7', borderRadius:3},
     {label:'Perempuan',  data:pData, backgroundColor:'#EF4444', borderRadius:3}
   ], {stacked:true});
 
-  /* 3. Trend kategori benef per bulan (top 4) */
-  var topKat = topN(groupCount(benef,function(r){return r[B.kategori];}),4).map(function(x){return x[0];});
+  /* 3. Trend kategori benef per bulan (top 4) — unique */
+  var topKat = topN(groupCountUniq(benef,function(r){return r[B.kategori];}),4).map(function(x){return x[0];});
   var bBulanSet={};
   benef.forEach(function(r){var bbt=validTgl(r[B.tgl]); if(bbt) bBulanSet[bbt]=1;});
   var benefBulan  = Object.keys(bBulanSet).sort();
@@ -228,7 +233,8 @@ function renderAnalitikCharts() {
     return {
       label:kat,
       data: benefBulan.map(function(bln){
-        return benef.filter(function(r){return r[B.kategori]===kat&&validTgl(r[B.tgl])===bln;}).length;
+        var rows = benef.filter(function(r){return r[B.kategori]===kat&&validTgl(r[B.tgl])===bln;});
+        return countUniqBenef(rows);
       }),
       borderColor:PALETTE[i], backgroundColor:PALETTE[i]+'22',
       fill:false, tension:.35, pointRadius:3
@@ -236,15 +242,15 @@ function renderAnalitikCharts() {
   });
   mkChart('ach-kategori-trend','line',bbLabels,katDS,{});
 
-  /* 4. Staf compare: benef vs biaya PJUM */
-  var topStafB = topN(groupCount(benef,function(r){return r[B.staf];}),10);
+  /* 4. Staf compare: benef unik vs biaya PJUM */
+  var topStafB = topN(groupCountUniq(benef,function(r){return r[B.staf];}),10);
   var stafNames = topStafB.map(function(x){return x[0];});
   var stafPjumD = stafNames.map(function(s){
     return pjum.filter(function(r){return r[P.staf]===s;})
                .reduce(function(acc,r){return acc+(parseFloat(r[P.jumlah])||0);},0);
   });
   mkMultiBar('ach-staf-compare', stafNames, [
-    {label:'Jml Benef', data:topStafB.map(function(x){return x[1];}), backgroundColor:'#F97316', borderRadius:3, yAxisID:'y'},
+    {label:'Jml Benef Unik', data:topStafB.map(function(x){return x[1];}), backgroundColor:'#F97316', borderRadius:3, yAxisID:'y'},
     {label:'Biaya PJUM', data:stafPjumD, backgroundColor:'#4F8EF7', borderRadius:3, yAxisID:'y1'}
   ], {
     extra:{
@@ -269,23 +275,23 @@ function renderAnalitikCharts() {
     '</div>';
   }).join('');
 
-  /* 6. Efisiensi Rp/benef per program */
-  var progBenef = groupCount(benef,function(r){return r[B.proyek];});
+  /* 6. Efisiensi Rp/benef per program — unique benef */
+  var progBenef = groupCountUniq(benef,function(r){return r[B.proyek];});
   var progCost  = groupSum(pjum,function(r){return r[P.proyek];},function(r){return r[P.jumlah];});
   var efisi = Object.keys(progBenef)
     .filter(function(p){return progCost[p];})
     .map(function(p){return {p:p, ratio:(progCost[p]||0)/(progBenef[p]||1)};})
     .sort(function(a,b){return a.ratio-b.ratio;}).slice(0,10);
   mkBarH('ach-efisiensi', efisi.map(function(e){return e.p;}), efisi.map(function(e){return e.ratio;}),
-    efisi.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Rp/Benef', yFmt:fmtShort});
+    efisi.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Rp/Benef Unik', yFmt:fmtShort});
 
-  /* 7. Top kategori benef bar */
-  var byKatAll = topN(groupCount(benef,function(r){return r[B.kategori];}),12);
+  /* 7. Top kategori benef bar — unique */
+  var byKatAll = topN(groupCountUniq(benef,function(r){return r[B.kategori];}),12);
   mkBarH('ach-top-kategori', byKatAll.map(function(x){return x[0];}), byKatAll.map(function(x){return x[1];}),
-    byKatAll.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Benef'});
+    byKatAll.map(function(_,i){return PALETTE[i%PALETTE.length];}), {label:'Benef Unik'});
 
-  /* 8. Benef per kabupaten (analitik) */
-  var byKabA = topN(groupCount(benef,function(r){return r[B.kab];}),12);
+  /* 8. Benef per kabupaten (analitik) — unique */
+  var byKabA = topN(groupCountUniq(benef,function(r){return r[B.kab];}),12);
   mkBarH('ach-kab', byKabA.map(function(x){return x[0];}), byKabA.map(function(x){return x[1];}),
-    '#14B8A6', {label:'Benef'});
+    '#14B8A6', {label:'Benef Unik'});
 }

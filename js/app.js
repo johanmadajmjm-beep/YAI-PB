@@ -503,8 +503,8 @@ function buildLaporanPage() {
     ['Total Program', Object.keys(progBS).length.toLocaleString()],
     ['Total Desa', Object.keys(desaS).length.toLocaleString()],
     ['Total Kabupaten', Object.keys(kabS).length.toLocaleString()],
-    ['L / P', benef.filter(function(r){return r[B.gender]==='L';}).length +
-      ' / ' + benef.filter(function(r){return r[B.gender]==='P';}).length],
+    ['L / P', countUniqByGender(benef,'L') +
+      ' / ' + countUniqByGender(benef,'P')],
   ];
   var bRekEl = document.getElementById('laporan-benef-rekap');
   if (bRekEl) bRekEl.innerHTML = rekapB.map(function(x) {
@@ -524,8 +524,8 @@ function buildLaporanPage() {
     var kpis = [
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',label:'Total Biaya PJUM',   val:fmtShort(totalCost),                           col:'sc-purple'},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',label:'Total Transaksi',     val:pjum.length.toLocaleString(),                  col:'sc-orange'},
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',label:'Total Benef',         val:benef.length.toLocaleString(),                 col:'sc-green'},
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',label:'Benef Unik',          val:Object.keys(uniqBSet).length.toLocaleString(), col:'sc-blue'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',label:'Benef Unik',          val:Object.keys(uniqBSet).length.toLocaleString(),  col:'sc-green'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',label:'Total Records',       val:benef.length.toLocaleString(),                  col:'sc-blue'},
     ];
     kpiEl.innerHTML = kpis.map(function(k){
       return '<div class="stat-card '+k.col+'"><div class="stat-icon-wrap">'+k.icon+'</div>'+
@@ -544,7 +544,7 @@ function buildLaporanPage() {
     var bUniqS = {};
     bRows.forEach(function(r){bUniqS[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')]=1;});
     var bUniq = Object.keys(bUniqS).length;
-    var rpp   = bTotal > 0 && cost > 0 ? fmtShort(cost/bTotal) : '—';
+    var rpp   = bUniq > 0 && cost > 0 ? fmtShort(cost/bUniq) : '—';
     return '<tr>' +
       '<td>'+(i+1)+'</td>' +
       '<td><strong>'+prog+'</strong></td>' +
@@ -568,12 +568,13 @@ function buildLaporanPage() {
     var pRowsS  = pjum.filter(function(r){return (r[P.staf]||'').trim().toLowerCase()===k;});
     var bRowsS  = benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
     var costS   = pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    var bUniqS  = countUniqBenef(bRowsS);
     return '<tr>' +
       '<td>'+(i+1)+'</td>' +
       '<td><strong>'+staf+'</strong></td>' +
       '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td>' +
       '<td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bRowsS.length>0?bRowsS.length.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(bUniqS>0?bUniqS.toLocaleString():'—')+'</td>' +
     '</tr>';
   }).join('');}
 

@@ -175,15 +175,14 @@ function renderBenefStats() {
   var B = window.B;
   var d = window.APP.benef.filtered;
   var total = d.length;
-  var uniqSet = {};
-  d.forEach(function(r) { uniqSet[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')] = 1; });
-  var gL    = d.filter(function(r){return r[B.gender]==='L';}).length;
-  var gP    = d.filter(function(r){return r[B.gender]==='P';}).length;
+  var uniq  = countUniqBenef(d);
+  var gL    = countUniqByGender(d, 'L');
+  var gP    = countUniqByGender(d, 'P');
   var desaS = {}; d.forEach(function(r){if(r[B.desa]) desaS[r[B.desa]]=1;});
   var progS = {}; d.forEach(function(r){if(r[B.proyek]) progS[r[B.proyek]]=1;});
 
-  setCard('bstat-total', Object.keys(uniqSet).length.toLocaleString(), total.toLocaleString('id-ID')+' total records');
-  setCard('bstat-lp',    gL.toLocaleString()+' / '+gP.toLocaleString(), (total?(gP/total*100).toFixed(1):0)+'% perempuan');
+  setCard('bstat-total', uniq.toLocaleString(), total.toLocaleString('id-ID')+' total records');
+  setCard('bstat-lp',    gL.toLocaleString()+' / '+gP.toLocaleString(), (uniq?(gP/uniq*100).toFixed(1):0)+'% perempuan');
   setCard('bstat-desa',  Object.keys(desaS).length.toLocaleString(), 'desa/kelurahan tercakup');
   setCard('bstat-prog',  Object.keys(progS).length.toLocaleString(), 'program aktif');
 }
@@ -191,14 +190,15 @@ function renderBenefStats() {
 function renderBenefCharts() {
   var B = window.B;
   var d = window.APP.benef.filtered;
+  var uniqTotal = countUniqBenef(d);
 
-  var byBulan = sortedBulan(groupCount(d,function(r){return validTgl(r[B.tgl]);}));
+  /* Trend unique benef per bulan */
+  var byBulan = sortedBulan(groupCountUniq(d,function(r){return validTgl(r[B.tgl]);}));
   var trendEl = document.getElementById('bch-trend');
   var trendWrap = trendEl ? trendEl.parentElement : null;
   var noTglMsg = document.getElementById('bch-trend-notgl');
 
   if (byBulan.length === 0) {
-    /* Semua data tidak punya tanggal valid */
     if (trendEl) trendEl.style.display = 'none';
     if (!noTglMsg && trendWrap) {
       var msg = document.createElement('div');
@@ -210,51 +210,56 @@ function renderBenefCharts() {
       noTglMsg.style.display = 'flex';
     }
   } else {
-    /* Ada data valid — tampilkan chart */
     if (trendEl) trendEl.style.display = '';
     if (noTglMsg) noTglMsg.style.display = 'none';
     mkLine('bch-trend',
       byBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
-      byBulan.map(function(x){return x[1];}), '#F97316', {label:'Benef',noLegend:true});
+      byBulan.map(function(x){return x[1];}), '#F97316', {label:'Benef Unik',noLegend:true});
   }
 
+  /* Gender donut — unique */
   var gMap={'L':'Laki-laki','P':'Perempuan','—':'Tidak Diisi'};
-  var byG = groupCount(d,function(r){return gMap[r[B.gender]]||'Tidak Diisi';});
+  var byG = groupCountUniq(d,function(r){return gMap[r[B.gender]]||'Tidak Diisi';});
   var gKeys=Object.keys(byG);
   var gCol={'Laki-laki':'#4F8EF7','Perempuan':'#EF4444','Tidak Diisi':'#8A96B8'};
   var gColArr=gKeys.map(function(k){return gCol[k]||'#8A96B8';});
   mkDonut('bch-gender',gKeys,gKeys.map(function(k){return byG[k];}),gColArr);
-  var gTotal=d.length||1;
   var gLeg=document.getElementById('bch-gender-legend');
   if(gLeg) gLeg.innerHTML=gKeys.map(function(k,i){
     return '<div class="dl-item"><div class="dl-dot" style="background:'+gColArr[i]+'"></div>'+
       '<div class="dl-name">'+k+'</div>'+
-      '<div class="dl-pct">'+(byG[k]/gTotal*100).toFixed(1)+'% ('+byG[k].toLocaleString()+')</div></div>';
+      '<div class="dl-pct">'+(uniqTotal?(byG[k]/uniqTotal*100).toFixed(1):0)+'% ('+byG[k].toLocaleString()+')</div></div>';
   }).join('');
 
-  var byKat=topN(groupCount(d,function(r){return r[B.kategori];}),10);
+  /* Kategori — unique per kategori */
+  var byKat=topN(groupCountUniq(d,function(r){return r[B.kategori];}),10);
   mkBarH('bch-kategori',byKat.map(function(x){return x[0];}),byKat.map(function(x){return x[1];}),
-    byKat.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef'});
+    byKat.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef Unik'});
 
-  var byUsia=topN(groupCount(d,function(r){return r[B.katUsia]||r[B.usia]||'—';}),8);
+  /* Usia — unique per kategori usia */
+  var byUsia=topN(groupCountUniq(d,function(r){return r[B.katUsia]||r[B.usia]||'—';}),8);
   mkBarH('bch-usia',byUsia.map(function(x){return x[0];}),byUsia.map(function(x){return x[1];}),
-    '#F59E0B',{label:'Benef'});
+    '#F59E0B',{label:'Benef Unik'});
 
-  var byProg=topN(groupCount(d,function(r){return r[B.proyek];}),8);
+  /* Proyek — unique per program */
+  var byProg=topN(groupCountUniq(d,function(r){return r[B.proyek];}),8);
   mkBarH('bch-proyek',byProg.map(function(x){return x[0];}),byProg.map(function(x){return x[1];}),
-    '#22C55E',{label:'Benef'});
+    '#22C55E',{label:'Benef Unik'});
 
-  var byDesa=topN(groupCount(d,function(r){return r[B.desa];}),10);
+  /* Desa — unique per desa */
+  var byDesa=topN(groupCountUniq(d,function(r){return r[B.desa];}),10);
   mkBarH('bch-desa',byDesa.map(function(x){return x[0];}),byDesa.map(function(x){return x[1];}),
-    '#8B5CF6',{label:'Benef'});
+    '#8B5CF6',{label:'Benef Unik'});
 
-  var byStaf=topN(groupCount(d,function(r){return r[B.staf];}),10);
+  /* Staf — unique per staf */
+  var byStaf=topN(groupCountUniq(d,function(r){return r[B.staf];}),10);
   mkBarH('bch-staf',byStaf.map(function(x){return x[0];}),byStaf.map(function(x){return x[1];}),
-    '#14B8A6',{label:'Benef'});
+    '#14B8A6',{label:'Benef Unik'});
 
-  var byDisab=topN(groupCount(d,function(r){return r[B.disab]||'—';}),8);
+  /* Disabilitas — unique per disab */
+  var byDisab=topN(groupCountUniq(d,function(r){return r[B.disab]||'—';}),8);
   mkBarH('bch-disab',byDisab.map(function(x){return x[0];}),byDisab.map(function(x){return x[1];}),
-    byDisab.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef'});
+    byDisab.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef Unik'});
 }
 
 function renderBenefTable() {
