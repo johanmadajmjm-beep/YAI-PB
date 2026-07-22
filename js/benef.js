@@ -331,3 +331,55 @@ window.changeBenefPage=function(dir){
   window.APP.benef.page=Math.max(0,window.APP.benef.page+dir);
   renderBenefTable();
 };
+
+/* ── Beneficiary PDF Export ── */
+window.exportBenefPDF = function() {
+  var B = window.B;
+  var d = window.APP.benef.filtered;
+  var uniq = countUniqBenef(d);
+  var gL = countUniqByGender(d,'L'), gP = countUniqByGender(d,'P');
+  var desaS={}; d.forEach(function(r){if(r[B.desa])desaS[r[B.desa]]=1;});
+  var progS={}; d.forEach(function(r){if(r[B.proyek])progS[r[B.proyek]]=1;});
+
+  var filterText = getFilterSummary([
+    {label:'Program',val:v('bf-proyek')},{label:'Staf',val:v('bf-staf')},
+    {label:'Kategori',val:v('bf-kategori')},{label:'Kabupaten',val:v('bf-kab')},
+    {label:'Kecamatan',val:v('bf-kec')},{label:'Disabilitas',val:v('bf-disab')},
+    {label:'Gender',val:v('bf-gender')},{label:'Tahun',val:v('bf-tahun')},
+    {label:'Bulan',val:v('bf-bulan')?bulanName(v('bf-bulan')):''}
+  ]);
+
+  var byKat = topN(groupCountUniq(d,function(r){return r[B.kategori];}),10);
+  var byDesa = topN(groupCountUniq(d,function(r){return r[B.desa];}),15);
+  var byProg = topN(groupCountUniq(d,function(r){return r[B.proyek];}),10);
+
+  buildPDF({
+    title: 'Laporan Data Beneficiary',
+    subtitle: 'Yayasan Ayo Indonesia — Analisis Penerima Manfaat',
+    filterText: filterText,
+    filename: 'Beneficiary_Report.pdf',
+    kpis: [
+      {label:'Benef Unik',value:uniq.toLocaleString()},
+      {label:'L / P',value:gL+' / '+gP},
+      {label:'Desa Tercakup',value:Object.keys(desaS).length},
+      {label:'Program',value:Object.keys(progS).length}
+    ],
+    sections: [
+      {type:'heading',text:'Trend Beneficiary per Bulan'},
+      {type:'chart',canvasId:'bch-trend',height:50},
+      {type:'heading',text:'Distribusi Gender'},
+      {type:'chart',canvasId:'bch-gender',height:45},
+      {type:'heading',text:'Distribusi per Kategori'},
+      {type:'table',head:['#','Kategori','Benef Unik','%'],
+        body:byKat.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
+      {type:'heading',text:'Distribusi per Desa (Top 15)'},
+      {type:'table',head:['#','Desa','Benef Unik','%'],
+        body:byDesa.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
+      {type:'heading',text:'Distribusi per Program'},
+      {type:'table',head:['#','Program','Benef Unik','%'],
+        body:byProg.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
+      {type:'heading',text:'Grafik per Kategori'},
+      {type:'chart',canvasId:'bch-kategori',height:55}
+    ]
+  });
+};

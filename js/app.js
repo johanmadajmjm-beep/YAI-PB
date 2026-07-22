@@ -460,123 +460,195 @@ function resetDashFilter() {
   buildDashboard();
 }
 
-/* Laporan page */
+/* Laporan page — now with filters */
 function buildLaporanPage() {
-  var pjum  = window.rawPjum;
-  var benef = window.rawBenef;
+  /* Populate filters (once) */
+  if (!window._laporanFilterAttached) {
+    var B = window.B, P = window.P;
+    var rawProgs = dedupProgram(
+      window.rawPjum.map(function(r){return r[P.proyek];})
+        .concat(window.rawBenef.map(function(r){return r[B.proyek];}))
+    );
+    populateSel('lf-proyek', rawProgs);
+    populateSel('lf-staf', dedupStaf(
+      window.rawPjum.map(function(r){return r[P.staf];})
+        .concat(window.rawBenef.map(function(r){return r[B.staf];}))
+    ));
+    var tahunSet = {};
+    window.rawPjum.forEach(function(r){var t=validTgl(r[P.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
+    window.rawBenef.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
+    populateSel('lf-tahun', Object.keys(tahunSet).sort().reverse());
+    populateSel('lf-bulan', ['01','02','03','04','05','06','07','08','09','10','11','12'], bulanName);
+
+    ['lf-proyek','lf-staf','lf-tahun','lf-bulan'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderLaporanContent);
+    });
+    var rb = document.getElementById('lf-reset');
+    if (rb) rb.addEventListener('click', function() {
+      ['lf-proyek','lf-staf','lf-tahun','lf-bulan'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+      renderLaporanContent();
+    });
+    window._laporanFilterAttached = true;
+  }
+  renderLaporanContent();
+}
+
+function getLaporanFiltered() {
+  var P = window.P, B = window.B;
+  var proyek = v('lf-proyek'), staf = v('lf-staf'), tahun = v('lf-tahun'), bulan = v('lf-bulan');
+  var proyekKey = proyek ? normKey(proyek) : '';
+  var stafKey   = staf   ? normStafKey(staf) : '';
+
+  function matchDate(tgl) {
+    if (!tahun && !bulan) return true;
+    var t = validTgl(tgl);
+    if (tahun && (!t || !t.startsWith(tahun))) return false;
+    if (bulan && (!t || t.slice(5,7) !== bulan)) return false;
+    return true;
+  }
+
+  var fb = window.rawBenef.filter(function(r) {
+    if (proyekKey && normKey(r[B.proyek]) !== proyekKey) return false;
+    if (stafKey && normStafKey(r[B.staf]) !== stafKey) return false;
+    return matchDate(r[B.tgl]);
+  });
+  var fp = window.rawPjum.filter(function(r) {
+    if (proyekKey && normKey(r[P.proyek]) !== proyekKey) return false;
+    if (stafKey && normStafKey(r[P.staf]) !== stafKey) return false;
+    return matchDate(r[P.tgl]);
+  });
+  return { benef: fb, pjum: fp };
+}
+
+function renderLaporanContent() {
+  var filtered = getLaporanFiltered();
+  var pjum = filtered.pjum, benef = filtered.benef;
   var P = window.P, B = window.B;
 
   var totalCost = pjum.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
   var fileS={},progPS={},stafPS={},kodeS={};
-  pjum.forEach(function(r){
-    if(r[P.file])   fileS[r[P.file]]=1;
-    if(r[P.proyek]) progPS[r[P.proyek]]=1;
-    if(r[P.staf])   stafPS[r[P.staf]]=1;
-    if(r[P.kode])   kodeS[r[P.kode]]=1;
-  });
+  pjum.forEach(function(r){if(r[P.file])fileS[r[P.file]]=1;if(r[P.proyek])progPS[r[P.proyek]]=1;if(r[P.staf])stafPS[r[P.staf]]=1;if(r[P.kode])kodeS[r[P.kode]]=1;});
   var rekap = [
-    ['Total Biaya', fmtShort(totalCost)],
-    ['Total Transaksi', pjum.length.toLocaleString()],
-    ['Total File Upload', Object.keys(fileS).length.toLocaleString()],
-    ['Total Program', Object.keys(progPS).length.toLocaleString()],
-    ['Total Staf', Object.keys(stafPS).length.toLocaleString()],
-    ['Total Kode Kegiatan', Object.keys(kodeS).length.toLocaleString()],
+    ['Total Biaya', fmtShort(totalCost)],['Total Transaksi', pjum.length.toLocaleString()],
+    ['Total File Upload', Object.keys(fileS).length.toLocaleString()],['Total Program', Object.keys(progPS).length.toLocaleString()],
+    ['Total Staf', Object.keys(stafPS).length.toLocaleString()],['Total Kode Kegiatan', Object.keys(kodeS).length.toLocaleString()],
   ];
   var pRekEl = document.getElementById('laporan-pjum-rekap');
   if (pRekEl) pRekEl.innerHTML = rekap.map(function(x) {
     return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">' +
-      '<span style="color:var(--text2);font-size:13px">'+x[0]+'</span>' +
-      '<span style="font-weight:700;font-size:13px">'+x[1]+'</span></div>';
+      '<span style="color:var(--text2);font-size:13px">'+x[0]+'</span><span style="font-weight:700;font-size:13px">'+x[1]+'</span></div>';
   }).join('');
 
-  var uniqBSet={};
-  benef.forEach(function(r){uniqBSet[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')]=1;});
-  var progBS={}, desaS={}, kabS={};
-  benef.forEach(function(r){
-    if(r[B.proyek]) progBS[r[B.proyek]]=1;
-    if(r[B.desa])   desaS[r[B.desa]]=1;
-    if(r[B.kab])    kabS[r[B.kab]]=1;
-  });
+  var uniqBenef = countUniqBenef(benef);
+  var progBS={},desaS={},kabS={};
+  benef.forEach(function(r){if(r[B.proyek])progBS[r[B.proyek]]=1;if(r[B.desa])desaS[r[B.desa]]=1;if(r[B.kab])kabS[r[B.kab]]=1;});
   var rekapB = [
-    ['Total Baris', benef.length.toLocaleString()],
-    ['Benef Unik', Object.keys(uniqBSet).length.toLocaleString()],
-    ['Total Program', Object.keys(progBS).length.toLocaleString()],
-    ['Total Desa', Object.keys(desaS).length.toLocaleString()],
+    ['Total Baris', benef.length.toLocaleString()],['Benef Unik', uniqBenef.toLocaleString()],
+    ['Total Program', Object.keys(progBS).length.toLocaleString()],['Total Desa', Object.keys(desaS).length.toLocaleString()],
     ['Total Kabupaten', Object.keys(kabS).length.toLocaleString()],
-    ['L / P', countUniqByGender(benef,'L') +
-      ' / ' + countUniqByGender(benef,'P')],
+    ['L / P', countUniqByGender(benef,'L')+' / '+countUniqByGender(benef,'P')],
   ];
   var bRekEl = document.getElementById('laporan-benef-rekap');
   if (bRekEl) bRekEl.innerHTML = rekapB.map(function(x) {
     return '<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">' +
-      '<span style="color:var(--text2);font-size:13px">'+x[0]+'</span>' +
-      '<span style="font-weight:700;font-size:13px">'+x[1]+'</span></div>';
+      '<span style="color:var(--text2);font-size:13px">'+x[0]+'</span><span style="font-weight:700;font-size:13px">'+x[1]+'</span></div>';
   }).join('');
-
-  var allProgMap = {};
-  pjum.forEach(function(r){if(r[P.proyek]) allProgMap[r[P.proyek].trim().toLowerCase()] = r[P.proyek].trim();});
-  benef.forEach(function(r){if(r[B.proyek]) allProgMap[r[B.proyek].trim().toLowerCase()] = r[B.proyek].trim();});
-  var allProg = Object.values(allProgMap).sort();
 
   /* KPI Summary */
   var kpiEl = document.getElementById('laporan-kpi-grid');
   if (kpiEl) {
     var kpis = [
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',label:'Total Biaya PJUM',   val:fmtShort(totalCost),                           col:'sc-purple'},
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',label:'Total Transaksi',     val:pjum.length.toLocaleString(),                  col:'sc-orange'},
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',label:'Benef Unik',          val:Object.keys(uniqBSet).length.toLocaleString(),  col:'sc-green'},
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',label:'Total Records',       val:benef.length.toLocaleString(),                  col:'sc-blue'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',label:'Total Biaya PJUM',val:fmtShort(totalCost),col:'sc-purple'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',label:'Total Transaksi',val:pjum.length.toLocaleString(),col:'sc-orange'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',label:'Benef Unik',val:uniqBenef.toLocaleString(),col:'sc-green'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',label:'Total Records',val:benef.length.toLocaleString(),col:'sc-blue'},
     ];
     kpiEl.innerHTML = kpis.map(function(k){
-      return '<div class="stat-card '+k.col+'"><div class="stat-icon-wrap">'+k.icon+'</div>'+
-        '<div class="stat-body"><div class="stat-label">'+k.label+'</div>'+
-        '<div class="stat-value">'+k.val+'</div></div></div>';
+      return '<div class="stat-card '+k.col+'"><div class="stat-icon-wrap">'+k.icon+'</div>' +
+        '<div class="stat-body"><div class="stat-label">'+k.label+'</div><div class="stat-value">'+k.val+'</div></div></div>';
     }).join('');
   }
 
-  /* Tabel per program */
+  /* Tables use filtered data */
+  var allProgMap = {};
+  pjum.forEach(function(r){if(r[P.proyek]) allProgMap[r[P.proyek].trim().toLowerCase()]=r[P.proyek].trim();});
+  benef.forEach(function(r){if(r[B.proyek]) allProgMap[r[B.proyek].trim().toLowerCase()]=r[B.proyek].trim();});
+  var allProg = Object.values(allProgMap).sort();
   var tbody = document.getElementById('laporan-prog-body');
   if (tbody) tbody.innerHTML = allProg.map(function(prog, i) {
-    var pRows  = pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
-    var bRows  = benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
-    var cost   = pRows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-    var bTotal = bRows.length;
-    var bUniqS = {};
-    bRows.forEach(function(r){bUniqS[(r[B.nama]||'').toLowerCase()+'|'+(r[B.desa]||'')]=1;});
-    var bUniq = Object.keys(bUniqS).length;
-    var rpp   = bUniq > 0 && cost > 0 ? fmtShort(cost/bUniq) : '—';
-    return '<tr>' +
-      '<td>'+(i+1)+'</td>' +
-      '<td><strong>'+prog+'</strong></td>' +
-      '<td class="num">'+(cost>0?fmtShort(cost):'—')+'</td>' +
-      '<td class="num">'+(pRows.length>0?pRows.length.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bTotal>0?bTotal.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bUniq>0?bUniq.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+rpp+'</td>' +
-    '</tr>';
+    var pRows=pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
+    var bRows=benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
+    var cost=pRows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    var bTotal=bRows.length, bUniq=countUniqBenef(bRows);
+    var rpp=bUniq>0&&cost>0?fmtShort(cost/bUniq):'—';
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+prog+'</strong></td>' +
+      '<td class="num">'+(cost>0?fmtShort(cost):'—')+'</td><td class="num">'+(pRows.length>0?pRows.length.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(bTotal>0?bTotal.toLocaleString():'—')+'</td><td class="num">'+(bUniq>0?bUniq.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+rpp+'</td></tr>';
   }).join('');
-  setEl('laporan-prog-count', allProg.length + ' program');
+  setEl('laporan-prog-count', allProg.length+' program');
 
-  /* Tabel per staf — group by lowercase supaya tidak double */
   var allStafMap = {};
-  pjum.forEach(function(r){if(r[P.staf]) allStafMap[r[P.staf].trim().toLowerCase()] = r[P.staf].trim();});
-  benef.forEach(function(r){if(r[B.staf]) allStafMap[r[B.staf].trim().toLowerCase()] = r[B.staf].trim();});
+  pjum.forEach(function(r){if(r[P.staf]) allStafMap[r[P.staf].trim().toLowerCase()]=r[P.staf].trim();});
+  benef.forEach(function(r){if(r[B.staf]) allStafMap[r[B.staf].trim().toLowerCase()]=r[B.staf].trim();});
   var allStaf = Object.values(allStafMap).sort();
   var stafTbody = document.getElementById('laporan-staf-body');
   if (stafTbody) stafTbody.innerHTML = allStaf.map(function(staf, i) {
-    var k = staf.trim().toLowerCase();
-    var pRowsS  = pjum.filter(function(r){return (r[P.staf]||'').trim().toLowerCase()===k;});
-    var bRowsS  = benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
-    var costS   = pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-    var bUniqS  = countUniqBenef(bRowsS);
-    return '<tr>' +
-      '<td>'+(i+1)+'</td>' +
-      '<td><strong>'+staf+'</strong></td>' +
-      '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td>' +
-      '<td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bUniqS>0?bUniqS.toLocaleString():'—')+'</td>' +
-    '</tr>';
-  }).join('');}
+    var k=staf.trim().toLowerCase();
+    var pRowsS=pjum.filter(function(r){return (r[P.staf]||'').trim().toLowerCase()===k;});
+    var bRowsS=benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
+    var costS=pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    var bUniqS=countUniqBenef(bRowsS);
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+staf+'</strong></td>' +
+      '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td><td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(bUniqS>0?bUniqS.toLocaleString():'—')+'</td></tr>';
+  }).join('');
+}
+
+/* ── Laporan PDF Export ── */
+window.exportLaporanPDF = function() {
+  var filtered = getLaporanFiltered();
+  var pjum=filtered.pjum, benef=filtered.benef;
+  var P=window.P, B=window.B;
+  var totalCost=pjum.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+  var uniq=countUniqBenef(benef);
+  var filterText = getFilterSummary([
+    {label:'Program',val:v('lf-proyek')},{label:'Staf',val:v('lf-staf')},
+    {label:'Tahun',val:v('lf-tahun')},{label:'Bulan',val:v('lf-bulan')?bulanName(v('lf-bulan')):''}
+  ]);
+
+  var allProgMap={};
+  pjum.forEach(function(r){if(r[P.proyek])allProgMap[r[P.proyek].trim().toLowerCase()]=r[P.proyek].trim();});
+  benef.forEach(function(r){if(r[B.proyek])allProgMap[r[B.proyek].trim().toLowerCase()]=r[B.proyek].trim();});
+  var progRows = Object.values(allProgMap).sort().map(function(prog,i){
+    var pR=pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
+    var bR=benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
+    var c=pR.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    var bu=countUniqBenef(bR);
+    return [i+1,prog,fmtShort(c),pR.length,bR.length,bu,bu>0&&c>0?fmtShort(c/bu):'—'];
+  });
+
+  buildPDF({
+    title:'Laporan Komprehensif', subtitle:'Yayasan Ayo Indonesia', filterText:filterText, filename:'Laporan_Lengkap.pdf',
+    kpis:[{label:'Total PJUM',value:fmtShort(totalCost)},{label:'Transaksi',value:pjum.length.toLocaleString()},{label:'Benef Unik',value:uniq.toLocaleString()},{label:'Rp/Benef',value:uniq?fmtShort(totalCost/uniq):'—'}],
+    sections:[
+      {type:'heading',text:'Rekap per Program'},
+      {type:'table',head:['#','Program','Biaya','Trx','Records','Unik','Rp/Benef'],body:progRows},
+      {type:'spacer',height:6},
+      {type:'text',text:'Laporan ini dibuat otomatis berdasarkan data yang tersedia. '+
+        'Total biaya PJUM sebesar '+fmt(totalCost)+' mencakup '+pjum.length.toLocaleString()+' transaksi. '+
+        'Penerima manfaat unik berjumlah '+uniq.toLocaleString()+' orang '+
+        'dengan rata-rata biaya per orang sebesar '+(uniq?fmtShort(totalCost/uniq):'—')+'.'}
+    ]
+  });
+};
+
+/* ── Excel Export ── */
+window.exportLaporanExcel = function() {
+  var filtered = getLaporanFiltered();
+  exportExcelLaporan(filtered.benef, filtered.pjum);
+};
 
 /* Boot */
 async function boot() {
