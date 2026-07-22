@@ -18,6 +18,7 @@
   --purple:    #8B5CF6;
   --purple-lt: #F5F3FF;
   --teal:      #14B8A6;
+  --teal-lt:   #E6FAF7;
   --bg:        #F5F6FA;
   --card:      #FFFFFF;
   --border:    #E8ECF4;
@@ -227,6 +228,7 @@ body {
 .sc-blue   .stat-icon-wrap { background: var(--blue-lt); }
 .sc-green  .stat-icon-wrap { background: var(--green-lt); }
 .sc-purple .stat-icon-wrap { background: var(--purple-lt); }
+.sc-teal   .stat-icon-wrap { background: var(--teal-lt); }
 .sc-teal   .stat-icon-wrap { background: #ECFFFE; }
 
 .stat-body  { flex: 1; min-width: 0; }
@@ -437,4 +439,49 @@ body {
   .filter-bar { flex-direction: column; }
   .filter-actions { margin-left: 0; width: 100%; }
   .tbl-search { width: 100%; }
+}
+
+/* ── Notification Panel ── */
+.notif-badge {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 16px; height: 16px; border-radius: 99px;
+  background: var(--red); color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 4px; line-height: 1;
+}
+.notif-panel {
+  position: absolute; top: 36px; right: 0; z-index: 100;
+  width: 320px; max-height: 360px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  overflow: hidden;
+}
+.notif-header {
+  padding: 12px 16px; font-weight: 700; font-size: 13px;
+  border-bottom: 1px solid var(--border); color: var(--text);
+}
+.notif-list { max-height: 300px; overflow-y: auto; }
+.notif-item {
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text2); cursor: default;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item .ni-icon {
+  width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.notif-item .ni-icon.ni-warn { background: var(--yellow-lt); }
+.notif-item .ni-icon.ni-info { background: var(--blue-lt); }
+.notif-item .ni-icon.ni-ok   { background: var(--green-lt); }
+.notif-item .ni-body { flex: 1; }
+.notif-item .ni-title { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.notif-item .ni-time  { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.notif-empty {
+  padding: 24px 16px; text-align: center;
+  color: var(--text3); font-size: 12px;
+}
+@media (max-width: 600px) {
+  .notif-panel { width: 280px; right: -60px; }
 }
