@@ -256,10 +256,36 @@ function renderBenefCharts() {
   mkBarH('bch-staf',byStaf.map(function(x){return x[0];}),byStaf.map(function(x){return x[1];}),
     '#14B8A6',{label:'Benef Unik'});
 
-  /* Disabilitas — unique per disab */
-  var byDisab=topN(groupCountUniq(d,function(r){return r[B.disab]||'—';}),8);
-  mkBarH('bch-disab',byDisab.map(function(x){return x[0];}),byDisab.map(function(x){return x[1];}),
-    byDisab.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef Unik'});
+  /* Disabilitas — Ya vs Tidak (donut comparison) */
+  var disabYa = 0, disabTidak = 0;
+  var disabSeen = {};
+  d.forEach(function(r) {
+    var key = benefKey(r);
+    if (disabSeen[key]) return;
+    disabSeen[key] = 1;
+    var val = (r[B.disab] || '').trim().toLowerCase();
+    if (val && val !== '—' && val !== 'tidak' && val !== 'tidak ada' && val !== 'none' && val !== 'no' && val !== '-') {
+      disabYa++;
+    } else {
+      disabTidak++;
+    }
+  });
+  var disabLabels = ['Disabilitas', 'Tidak/Kosong'];
+  var disabValues = [disabYa, disabTidak];
+  var disabColors = ['#F97316', '#CBD5E1'];
+  mkDonut('bch-disab', disabLabels, disabValues, disabColors);
+  setEl('disab-center-val', uniqTotal.toLocaleString());
+  setEl('disab-center-lbl', 'Total');
+  var disabLeg = document.getElementById('bch-disab-legend');
+  if (disabLeg) {
+    var disabTotal = disabYa + disabTidak || 1;
+    disabLeg.innerHTML = disabLabels.map(function(label, i) {
+      var val = disabValues[i];
+      return '<div class="dl-item"><div class="dl-dot" style="background:' + disabColors[i] + '"></div>' +
+        '<div class="dl-name">' + label + '</div>' +
+        '<div class="dl-pct">' + (val/disabTotal*100).toFixed(1) + '% (' + val.toLocaleString() + ')</div></div>';
+    }).join('');
+  }
 }
 
 function renderBenefTable() {

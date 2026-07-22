@@ -12,9 +12,17 @@ function buildDashboard() {
   /* ── KPI Cards ── */
   var uniqBenef = countUniqBenef(benef);
   var totalRows = benef.length;
+
+  /* PJUM: unique file names */
   var fileSet = {};
   pjum.forEach(function(r) { if(r[P.file]) fileSet[r[P.file]] = 1; });
   var totalPjum = Object.keys(fileSet).length;
+
+  /* Benef: unique file names */
+  var benefFileSet = {};
+  benef.forEach(function(r) { if(r[B.file]) benefFileSet[r[B.file]] = 1; });
+  var totalBenefFile = Object.keys(benefFileSet).length;
+
   var totalCost = pjum.reduce(function(s, r) { return s + (parseFloat(r[P.jumlah]) || 0); }, 0);
   var desaSet = {};
   benef.forEach(function(r) { if(r[B.desa]) desaSet[r[B.desa]] = 1; });
@@ -25,10 +33,24 @@ function buildDashboard() {
 
   setEl('kpi-benef', uniqBenef.toLocaleString('id-ID'));
   setEl('kpi-pjum',  totalPjum.toLocaleString('id-ID'));
+  setEl('kpi-benef-file', totalBenefFile.toLocaleString('id-ID'));
   setEl('kpi-desa',  totalDesa.toLocaleString('id-ID'));
   setEl('kpi-kab',   totalKab + ' Kabupaten');
   setEl('kpi-biaya', fmtShort(totalCost));
   setEl('kpi-uniq',  totalRows.toLocaleString('id-ID') + ' total records');
+
+  /* Dynamic subtitles for file counts */
+  var tahunF = v('dash-tahun'), bulanF = v('dash-bulan');
+  var periodLabel = '';
+  if (tahunF && tahunF !== '__blank__') {
+    periodLabel = bulanF && bulanF !== '__blank__'
+      ? bulanName(bulanF) + ' ' + tahunF
+      : 'Tahun ' + tahunF;
+  } else if (bulanF && bulanF !== '__blank__') {
+    periodLabel = 'Bulan ' + bulanName(bulanF);
+  }
+  setEl('kpi-pjum-sub', periodLabel ? 'file · ' + periodLabel : 'file terupload');
+  setEl('kpi-benef-file-sub', periodLabel ? 'file · ' + periodLabel : 'file terupload');
 
   /* ── Trend Benef per Bulan (unique per bulan) ── */
   var benefByBulan = sortedBulan(groupCountUniq(benef, function(r) { return validTgl(r[B.tgl]); }));
@@ -63,10 +85,10 @@ function buildDashboard() {
   setEl('donut-center-lbl', 'Unik');
   renderDonutLegend('donut-legend', katData, katTotal);
 
-  /* ── Benef per Kabupaten — unique per kab ── */
-  var kabData = topN(groupCountUniq(benef, function(r) { return r[B.kab]; }), 8);
-  var kabMax  = kabData[0] ? kabData[0][1] : 1;
-  renderRankList('rank-kab', kabData, kabMax, function(v) { return v.toLocaleString(); }, false);
+  /* ── Benef per Desa (changed from Kabupaten) — unique per desa ── */
+  var desaData = topN(groupCountUniq(benef, function(r) { return r[B.desa]; }), 10);
+  var desaMax  = desaData[0] ? desaData[0][1] : 1;
+  renderRankList('rank-desa', desaData, desaMax, function(v) { return v.toLocaleString(); }, false);
 
   /* ── Pengeluaran PJUM per Bulan ── */
   var pjumByBulan = sortedBulan(groupSum(pjum,
@@ -74,20 +96,20 @@ function buildDashboard() {
     function(r) { return r[P.jumlah]; }
   ));
 
-  var noTglEl = document.getElementById('ch-dash-pjum-trend-notgl');
-  var wrapEl  = document.getElementById('ch-dash-pjum-trend') ? document.getElementById('ch-dash-pjum-trend').parentElement : null;
+  var noTglEl2 = document.getElementById('ch-dash-pjum-trend-notgl');
+  var wrapEl2  = document.getElementById('ch-dash-pjum-trend') ? document.getElementById('ch-dash-pjum-trend').parentElement : null;
   if (pjumByBulan.length === 0) {
-    var cv = document.getElementById('ch-dash-pjum-trend'); if(cv) cv.style.display='none';
-    if (!noTglEl && wrapEl) {
-      var msg=document.createElement('div');
-      msg.id='ch-dash-pjum-trend-notgl';
-      msg.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
-      msg.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
-      wrapEl.appendChild(msg);
-    } else if(noTglEl) { noTglEl.style.display='flex'; }
+    var cv3 = document.getElementById('ch-dash-pjum-trend'); if(cv3) cv3.style.display='none';
+    if (!noTglEl2 && wrapEl2) {
+      var msg2=document.createElement('div');
+      msg2.id='ch-dash-pjum-trend-notgl';
+      msg2.style.cssText='display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);font-size:12px;flex-direction:column;gap:6px';
+      msg2.innerHTML='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Data tanggal tidak tersedia untuk filter ini</span>';
+      wrapEl2.appendChild(msg2);
+    } else if(noTglEl2) { noTglEl2.style.display='flex'; }
   } else {
-    var cv2=document.getElementById('ch-dash-pjum-trend'); if(cv2) cv2.style.display='';
-    if(noTglEl) noTglEl.style.display='none';
+    var cv4=document.getElementById('ch-dash-pjum-trend'); if(cv4) cv4.style.display='';
+    if(noTglEl2) noTglEl2.style.display='none';
     mkBar('ch-dash-pjum-trend',
       pjumByBulan.map(function(x){var p=x[0].split('-');return bulanName(p[1])+"'"+p[0].slice(2);}),
       pjumByBulan.map(function(x){return x[1];}),
@@ -110,6 +132,9 @@ function buildDashboard() {
 
   /* ── AI Insight ── */
   buildAiInsight(benef, pjum);
+
+  /* ── Notifikasi ── */
+  buildNotifications(benef, pjum);
 }
 
 function buildAiInsight(benef, pjum) {
@@ -136,6 +161,82 @@ function buildAiInsight(benef, pjum) {
     'Pengeluaran PJUM tertinggi pada <strong>' + topBulan + '</strong> senilai <strong>' + fmtShort(topBulanCost[1]) + '</strong>.'
   );
 }
+
+/* ── Notifikasi: auto-detect data issues ── */
+function buildNotifications(benef, pjum) {
+  var B = window.B, P = window.P;
+  var items = [];
+
+  /* 1. Benef tanpa tanggal */
+  var noTgl = benef.filter(function(r) { return !validTgl(r[B.tgl]); }).length;
+  if (noTgl > 0) {
+    items.push({ type:'warn', title: noTgl.toLocaleString() + ' record benef tanpa tanggal',
+      desc: 'Data tanpa tanggal tidak muncul di grafik trend' });
+  }
+
+  /* 2. Benef tanpa desa */
+  var noDesa = benef.filter(function(r) { return !r[B.desa] || r[B.desa] === '—'; }).length;
+  if (noDesa > 0) {
+    items.push({ type:'warn', title: noDesa.toLocaleString() + ' record benef tanpa desa',
+      desc: 'Sebaran wilayah mungkin tidak akurat' });
+  }
+
+  /* 3. Benef tanpa gender */
+  var noGender = benef.filter(function(r) { return r[B.gender] === '—'; }).length;
+  if (noGender > 0) {
+    items.push({ type:'info', title: noGender.toLocaleString() + ' record benef tanpa gender',
+      desc: 'Gender tidak terisi (L/P)' });
+  }
+
+  /* 4. PJUM tanpa tanggal */
+  var pjumNoTgl = pjum.filter(function(r) { return !validTgl(r[P.tgl]); }).length;
+  if (pjumNoTgl > 0) {
+    items.push({ type:'warn', title: pjumNoTgl.toLocaleString() + ' item PJUM tanpa tanggal',
+      desc: 'Tidak muncul di grafik pengeluaran per bulan' });
+  }
+
+  /* 5. Summary OK if no issues */
+  if (items.length === 0) {
+    items.push({ type:'ok', title: 'Semua data terlihat baik',
+      desc: countUniqBenef(benef).toLocaleString() + ' benef unik, ' + pjum.length.toLocaleString() + ' transaksi PJUM' });
+  }
+
+  /* Render */
+  var badge = document.getElementById('notif-badge');
+  var list  = document.getElementById('notif-list');
+  if (!badge || !list) return;
+
+  var warnCount = items.filter(function(i) { return i.type === 'warn'; }).length;
+  if (warnCount > 0) {
+    badge.textContent = warnCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  var iconMap = { warn: '⚠️', info: 'ℹ️', ok: '✅' };
+  var classMap = { warn: 'ni-warn', info: 'ni-info', ok: 'ni-ok' };
+  list.innerHTML = items.map(function(it) {
+    return '<div class="notif-item">' +
+      '<div class="ni-icon ' + classMap[it.type] + '">' + iconMap[it.type] + '</div>' +
+      '<div class="ni-body"><div class="ni-title">' + it.title + '</div>' +
+      '<div>' + it.desc + '</div></div></div>';
+  }).join('');
+}
+
+/* ── Toggle notif panel on click ── */
+(function() {
+  var btn = document.getElementById('btn-notif');
+  var panel = document.getElementById('notif-panel');
+  if (!btn || !panel) return;
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', function(e) {
+    if (!btn.contains(e.target)) panel.style.display = 'none';
+  });
+})();
 
 function renderDonutLegend(id, entries, total) {
   var el = document.getElementById(id);
