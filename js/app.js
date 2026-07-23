@@ -23,7 +23,7 @@ function navigate(page) {
     dashboard:   'Executive Dashboard',
     beneficiary: 'Data Beneficiary',
     pjum:        'Data PJUM',
-    wilayah:     'Sebaran Wilayah',
+    wilayah:     'Sebaran — Wilayah, Paroki & Instansi',
     analitik:    'Analitik Mendalam',
     laporan:     'Laporan & Export'
   };

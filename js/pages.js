@@ -8,6 +8,10 @@ function getFilteredWilayah(sf){var B=window.B,p=sf!=='proyek'?v('wf-proyek'):''
 function refreshWilayahFilters(si){var B=window.B;if(si!=='wf-proyek'){var c=v('wf-proyek');populateSel('wf-proyek',uniqArr(getFilteredWilayah('proyek').map(function(r){return r[B.proyek];})));document.getElementById('wf-proyek').value=c;}if(si!=='wf-tahun'){var c2=v('wf-tahun'),d2=getFilteredWilayah('tahun'),ts={},hb=false;d2.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)ts[t.slice(0,4)]=1;else hb=true;});var at=Object.keys(ts).sort().reverse();if(hb)at.push('__blank__');populateSel('wf-tahun',at,function(v){return v==='__blank__'?'(Tanggal Kosong)':v;});document.getElementById('wf-tahun').value=c2;}}
 function applyWilayahFilter(){var B=window.B,p=v('wf-proyek'),t=v('wf-tahun');window.APP.wilayah.filtered=window.rawBenef.filter(function(r){if(p&&r[B.proyek]!==p)return false;var tv=validTgl(r[B.tgl]);if(t==='__blank__'&&tv)return false;if(t&&t!=='__blank__'&&(!tv||!tv.startsWith(t)))return false;return true;});window.APP.wilayah.page=0;renderWilayahAll();}
 function renderWilayahAll(){var B=window.B,d=window.APP.wilayah.filtered;var kabS={},kecS={},desaS={};d.forEach(function(r){if(r[B.kab])kabS[r[B.kab]]=1;if(r[B.kec])kecS[r[B.kec]]=1;if(r[B.desa])desaS[r[B.desa]]=1;});var ut=countUniqBenef(d);setEl('wstat-kab',Object.keys(kabS).length.toLocaleString());setEl('wstat-kec',Object.keys(kecS).length.toLocaleString());setEl('wstat-desa',Object.keys(desaS).length.toLocaleString());setEl('wstat-tot',ut.toLocaleString());
+var parokiS={},instansiS={};d.forEach(function(r){if(r[B.paroki])parokiS[r[B.paroki]]=1;if(r[B.instansi])instansiS[r[B.instansi]]=1;});
+setEl('wstat-paroki',Object.keys(parokiS).length.toLocaleString());setEl('wstat-instansi',Object.keys(instansiS).length.toLocaleString());
+var bpk=topN(groupCountUniq(d.filter(function(r){return r[B.paroki];}),function(r){return r[B.paroki];}),15);mkBarH('wch-paroki',bpk.map(function(x){return x[0];}),bpk.map(function(x){return x[1];}),'#14B8A6',{label:'Benef Unik'});
+var bin=topN(groupCountUniq(d.filter(function(r){return r[B.instansi];}),function(r){return r[B.instansi];}),15);mkBarH('wch-instansi',bin.map(function(x){return x[0];}),bin.map(function(x){return x[1];}),'#F59E0B',{label:'Benef Unik'});
 var bk=topN(groupCountUniq(d,function(r){return r[B.kab];}),15);mkBarH('wch-kab',bk.map(function(x){return x[0];}),bk.map(function(x){return x[1];}),bk.map(function(_,i){return PALETTE[i%PALETTE.length];}),{label:'Benef Unik'});
 var bc=topN(groupCountUniq(d,function(r){return r[B.kec];}),15);mkBarH('wch-kec',bc.map(function(x){return x[0];}),bc.map(function(x){return x[1];}),'#F97316',{label:'Benef Unik'});
 var bd=topN(groupCountUniq(d,function(r){return r[B.desa];}),15);mkBarH('wch-desa',bd.map(function(x){return x[0];}),bd.map(function(x){return x[1];}),'#8B5CF6',{label:'Benef Unik'});
@@ -189,14 +193,28 @@ function renderAnalitikContent(){
   benef.forEach(function(r){if(r[B.desa]&&r[B.proyek]){if(!desaProgs[r[B.desa]])desaProgs[r[B.desa]]={};desaProgs[r[B.desa]][r[B.proyek]]=1;}});
   var underServed=Object.keys(desaProgs).filter(function(d){return Object.keys(desaProgs[d]).length===1;});
 
-  var insEl=document.getElementById('analitik-insights');
-  if(insEl) insEl.innerHTML=
-    '<div class="insight-card"><div class="ic-title">Program Paling Efisien</div><div class="ic-stat">'+cheapest.p+'</div><div class="ic-body">'+fmtShort(cheapest.r)+' per orang — biaya terendah per beneficiary unik</div></div>'+
-    '<div class="insight-card"><div class="ic-title">Program Paling Mahal</div><div class="ic-stat">'+priciest.p+'</div><div class="ic-body">'+fmtShort(priciest.r)+' per orang — biaya tertinggi per beneficiary unik</div></div>'+
-    '<div class="insight-card"><div class="ic-title">Ketimpangan Gender Terbesar</div><div class="ic-stat">'+topImb.p+'</div><div class="ic-body">L: '+topImb.l+' / P: '+topImb.pp+' — rasio paling tidak seimbang</div></div>'+
-    '<div class="insight-card"><div class="ic-title">Desa Under-Served</div><div class="ic-stat">'+underServed.length+'</div><div class="ic-body">dari '+Object.keys(desaProgs).length+' desa hanya dilayani 1 program</div></div>'+
-    '<div class="insight-card"><div class="ic-title">Rasio Gender Keseluruhan</div><div class="ic-stat">'+(gL>0?(gP/gL).toFixed(2):'—')+'</div><div class="ic-body">P:L — '+gP.toLocaleString()+' perempuan / '+gL.toLocaleString()+' laki-laki</div></div>'+
-    '<div class="insight-card"><div class="ic-title">Biaya per Beneficiary</div><div class="ic-stat">'+fmtShort(ut>0?tc/ut:0)+'</div><div class="ic-body">Total '+fmtShort(tc)+' / '+ut.toLocaleString()+' orang unik</div></div>';
+  /* ── 1b. Overlap benef antar program ── */
+  var personProgs={};
+  benef.forEach(function(r){var k=benefKey(r);if(!personProgs[k])personProgs[k]={};if(r[B.proyek])personProgs[k][r[B.proyek]]=1;});
+  var ov1=0,ov2=0,ov3=0;
+  Object.keys(personProgs).forEach(function(k){var n=Object.keys(personProgs[k]).length;if(n<=1)ov1++;else if(n===2)ov2++;else ov3++;});
+  var ovTotal=ov1+ov2+ov3;
+  var OV_COLORS=['#F97316','#4F8EF7','#8B5CF6'];
+  mkDonut('ach-overlap',['1 Program','2 Program','3+ Program'],[ov1,ov2,ov3],OV_COLORS);
+  setEl('ach-overlap-total',ovTotal.toLocaleString());
+  var ovLg=document.getElementById('ach-overlap-legend');
+  if(ovLg) ovLg.innerHTML=[['1 Program',ov1],['2 Program',ov2],['3+ Program',ov3]].map(function(x,i){
+    return '<div class="dl-item"><div class="dl-dot" style="background:'+OV_COLORS[i]+'"></div><div class="dl-name">'+x[0]+'</div><div class="dl-pct">'+x[1].toLocaleString()+' ('+(ovTotal?(x[1]/ovTotal*100).toFixed(1):0)+'%)</div></div>';
+  }).join('');
+
+  /* ── 1c. Kuadran program: benef unik (x) vs biaya (y) ── */
+  var scData=Object.keys(progBenef).map(function(p){return {x:progBenef[p], y:progCost[p]||0, label:p};});
+  var kdCh=mkChart('ach-kuadran','scatter',[],[{label:'Program',data:scData,backgroundColor:'rgba(249,115,22,.75)',borderColor:'#EA6C0A',borderWidth:1,pointRadius:5,pointHoverRadius:7}],
+    {noLegend:true,extra:{scales:{
+      x:{title:{display:true,text:'Benef Unik',color:'#918C81',font:{size:10}},ticks:{color:'#918C81',font:{size:10}},grid:{color:'#F1EEE7'}},
+      y:{title:{display:true,text:'Biaya PJUM',color:'#918C81',font:{size:10}},ticks:{color:'#918C81',font:{size:10},callback:fmtShort},grid:{color:'#F1EEE7'}}
+    }}});
+  if(kdCh){kdCh.options.plugins.tooltip.callbacks={label:function(ctx){var d=ctx.raw;return d.label+': '+d.x.toLocaleString()+' benef · '+fmtShort(d.y);}};kdCh.update();}
 
   /* ── 2. Efisiensi Program (bar) ── */
   mkBarH('ach-efisiensi', efisi.map(function(e){return e.p;}), efisi.map(function(e){return e.r;}),
@@ -212,8 +230,8 @@ function renderAnalitikContent(){
     var key=kat+'||'+kab;if(!ctData[key])ctData[key]={};
     ctData[key][benefKey(r)]=1;
   });
-  var maxCT=1;
-  katList.forEach(function(kat){kabList.forEach(function(kab){var c=ctData[kat+'||'+kab]?Object.keys(ctData[kat+'||'+kab]).length:0;if(c>maxCT)maxCT=c;});});
+  var maxCT=1, maxCTKat='—', maxCTKab='—';
+  katList.forEach(function(kat){kabList.forEach(function(kab){var c=ctData[kat+'||'+kab]?Object.keys(ctData[kat+'||'+kab]).length:0;if(c>maxCT){maxCT=c;maxCTKat=kat;maxCTKab=kab;}});});
   var ctEl=document.getElementById('ach-crosstab');
   if(ctEl){
     var html='<div class="tbl-scroll"><table class="data-table ct-table"><thead><tr><th>Kategori</th>';
@@ -286,6 +304,83 @@ function renderAnalitikContent(){
     '<div class="insight-card"><div class="ic-title">Kelengkapan Tanggal</div><div class="ic-stat"'+tglColor+'>'+((total-noTgl)/total*100).toFixed(1)+'%</div><div class="ic-body">'+noTgl.toLocaleString()+' dari '+total.toLocaleString()+' record tanpa tanggal</div></div>'+
     '<div class="insight-card"><div class="ic-title">Kelengkapan Gender</div><div class="ic-stat"'+gColor+'>'+((total-noGender)/total*100).toFixed(1)+'%</div><div class="ic-body">'+noGender.toLocaleString()+' record tanpa data L/P</div></div>'+
     '<div class="insight-card"><div class="ic-title">Kelengkapan Wilayah</div><div class="ic-stat"'+dColor+'>'+((total-noDesa)/total*100).toFixed(1)+'%</div><div class="ic-body">'+noDesa.toLocaleString()+' record tanpa data desa</div></div>';
+  }
+
+  /* ── 9. INSIGHT RAIL — semua temuan otomatis di panel kanan ── */
+  var railEl=document.getElementById('analitik-rail');
+  if(railEl){
+    function insItem(dot,html){return '<div class="ins-item"><div class="ins-dot d-'+dot+'"></div><div class="ins-text">'+html+'</div></div>';}
+    function insGroup(t){return '<div class="ins-group-title">'+t+'</div>';}
+    var rail='';
+
+    if(ut===0){
+      railEl.innerHTML=insItem('yellow','Data belum cukup untuk menghasilkan insight.');
+    } else {
+      /* Efisiensi */
+      rail+=insGroup('Efisiensi');
+      if(efisi.length){
+        rail+=insItem('green','Paling efisien: <strong>'+cheapest.p+'</strong> ('+fmtShort(cheapest.r)+'/benef). Termahal: <strong>'+priciest.p+'</strong> ('+fmtShort(priciest.r)+'/benef).');
+        if(cheapest.r>0&&efisi.length>1) rail+=insItem('orange','Gap efisiensi <strong>'+(priciest.r/cheapest.r).toFixed(1)+'× lipat</strong> antara program termahal dan termurah.');
+      }
+      rail+=insItem('blue','Rata-rata biaya <strong>'+fmtShort(ut>0?tc/ut:0)+'</strong> per benef unik (total '+fmtShort(tc)+').');
+
+      /* Jangkauan & Overlap */
+      rail+=insGroup('Jangkauan &amp; Overlap');
+      var ovMulti=ov2+ov3;
+      rail+=insItem(ovMulti>0?'purple':'blue','<strong>'+ovMulti.toLocaleString()+' orang</strong> ('+(ovTotal?(ovMulti/ovTotal*100).toFixed(1):0)+'%) menerima lebih dari 1 program'+(ov3>0?' — '+ov3.toLocaleString()+' di antaranya 3+ program':'')+'.');
+      var progSorted=topN(progBenef,999), progSum=progSorted.reduce(function(s,x){return s+x[1];},0)||1;
+      var cum=0,n80=0;
+      for(var pi=0;pi<progSorted.length;pi++){cum+=progSorted[pi][1];n80++;if(cum/progSum>=0.8)break;}
+      rail+=insItem('orange','<strong>80% jangkauan</strong> terkonsentrasi di '+n80+' dari '+progSorted.length+' program (Pareto). Terbesar: <strong>'+(progSorted[0]?progSorted[0][0]:'—')+'</strong>.');
+
+      /* Gender */
+      rail+=insGroup('Gender');
+      rail+=insItem('blue','Rasio keseluruhan P:L = <strong>'+(gL>0?(gP/gL).toFixed(2):'—')+'</strong> ('+gP.toLocaleString()+' P / '+gL.toLocaleString()+' L).');
+      if(topImb.p!=='—') rail+=insItem(topImb.ratio>0.5?'red':'yellow','Paling timpang: <strong>'+topImb.p+'</strong> (L '+topImb.l+' / P '+topImb.pp+').');
+
+      /* Wilayah */
+      rail+=insGroup('Wilayah');
+      var totDesaN=Object.keys(desaProgs).length||1;
+      rail+=insItem(underServed.length>0?'red':'green','<strong>'+underServed.length+'</strong> dari '+totDesaN+' desa ('+(underServed.length/totDesaN*100).toFixed(0)+'%) hanya dilayani <strong>1 program</strong>.');
+      if(maxCTKat!=='—') rail+=insItem('teal','Sel terpadat: <strong>'+maxCTKat+' × '+maxCTKab+'</strong> ('+maxCT.toLocaleString()+' benef unik).');
+
+      /* Staf */
+      rail+=insGroup('Staf');
+      if(topSB.length){
+        rail+=insItem('orange','Beban tertinggi: <strong>'+topSB[0][0]+'</strong> ('+topSB[0][1].toLocaleString()+' benef unik).');
+        var stafRasio=sn.map(function(s,i){return {s:s,r:topSB[i][1]>0?spd[i]/topSB[i][1]:0};}).filter(function(x){return x.r>0;}).sort(function(a,b){return b.r-a.r;});
+        if(stafRasio.length>=3){
+          var med=stafRasio[Math.floor(stafRasio.length/2)].r;
+          if(med>0&&stafRasio[0].r>=2*med){
+            rail+=insItem('red','Anomali: <strong>'+stafRasio[0].s+'</strong> Rp/benef '+fmtShort(stafRasio[0].r)+' — <strong>'+(stafRasio[0].r/med).toFixed(1)+'× median</strong>, perlu dicek.');
+          } else {
+            rail+=insItem('green','Tidak ada anomali biaya per staf yang menonjol (semua < 2× median).');
+          }
+        }
+      }
+
+      /* Trend */
+      rail+=insGroup('Trend');
+      if(allBln.length>=2){
+        var mUniq=allBln.map(function(bln){return countUniqBenef(benef.filter(function(r){return validTgl(r[B.tgl])===bln;}));});
+        var last=mUniq[mUniq.length-1], prev=mUniq[mUniq.length-2];
+        var delta=prev>0?((last-prev)/prev*100):0;
+        rail+=insItem(delta>=0?'green':'red','Bulan terakhir ('+blnLbl[blnLbl.length-1]+') <strong>'+(delta>=0?'naik':'turun')+' '+Math.abs(delta).toFixed(1)+'%</strong> vs bulan sebelumnya ('+last.toLocaleString()+' benef).');
+        var pkIdx=mUniq.indexOf(Math.max.apply(null,mUniq));
+        rail+=insItem('purple','Puncak jangkauan: <strong>'+blnLbl[pkIdx]+'</strong> ('+mUniq[pkIdx].toLocaleString()+' benef unik).');
+      } else {
+        rail+=insItem('yellow','Data bertanggal belum cukup untuk analisis trend bulanan.');
+      }
+
+      /* Kualitas Data — hanya jika ada masalah */
+      if(noTgl+noGender+noDesa>0){
+        rail+=insGroup('Kualitas Data');
+        var worst=[['Tanggal',noTgl],['Gender',noGender],['Desa',noDesa]].sort(function(a,b){return b[1]-a[1];})[0];
+        rail+=insItem('yellow','Kelengkapan terendah: <strong>'+worst[0]+'</strong> ('+((total-worst[1])/total*100).toFixed(1)+'% terisi, '+worst[1].toLocaleString()+' record kosong).');
+      }
+
+      railEl.innerHTML=rail;
+    }
   }
 }
 
