@@ -175,7 +175,7 @@ function buildNotifications(benef, pjum) {
   });
 })();
 
-/* ── Dashboard PDF Export ── */
+/* ── Dashboard PDF Export — Narrative ── */
 window.exportDashPDF = function() {
   var filtered = getDashFiltered();
   var benef = filtered.benef, pjum = filtered.pjum;
@@ -185,37 +185,36 @@ window.exportDashPDF = function() {
   var desaS={}; benef.forEach(function(r){if(r[B.desa])desaS[r[B.desa]]=1;});
   var kabS={}; benef.forEach(function(r){if(r[B.kab])kabS[r[B.kab]]=1;});
   var gL=countUniqByGender(benef,'L'), gP=countUniqByGender(benef,'P');
-
   var filterText = getFilterSummary([
     {label:'Program',val:v('dash-proyek')},{label:'Staf',val:v('dash-staf')},
     {label:'Tahun',val:v('dash-tahun')},{label:'Bulan',val:v('dash-bulan')?bulanName(v('dash-bulan')):''}
   ]);
-
   var desaData = topN(groupCountUniq(benef, function(r){return r[B.desa];}), 15);
   var kegData = topN(groupCountUniq(benef, function(r){return r[B.kegiatan];}), 10);
+  var topDesa = desaData[0]||['—',0];
+  var topKeg = kegData[0]||['—',0];
+  var rppAvg = uniq > 0 ? cost/uniq : 0;
 
   buildPDF({
-    title: 'Executive Dashboard Report',
-    subtitle: 'Yayasan Ayo Indonesia — Ringkasan Eksekutif',
-    filterText: filterText,
-    filename: 'Dashboard_Report.pdf',
-    kpis: [
-      {label:'Benef Unik', value:uniq.toLocaleString()},
-      {label:'L / P', value:gL+' / '+gP},
-      {label:'Desa', value:Object.keys(desaS).length},
-      {label:'Biaya PJUM', value:fmtShort(cost)}
+    title: 'Ringkasan Eksekutif', subtitle: 'Yayasan Ayo Indonesia', filterText: filterText, filename: 'Dashboard_Report.pdf',
+    narrative: [
+      {heading: 'Ringkasan Eksekutif'},
+      {text: 'Laporan ini menyajikan ringkasan kinerja program Yayasan Ayo Indonesia berdasarkan data yang tersedia. Secara keseluruhan, program telah menjangkau '+uniq.toLocaleString()+' penerima manfaat unik yang tersebar di '+Object.keys(desaS).length+' desa/kelurahan pada '+Object.keys(kabS).length+' kabupaten/kota. Total biaya PJUM yang tercatat sebesar '+fmt(cost)+' dari '+pjum.length.toLocaleString()+' transaksi.'},
+      {heading: 'Profil Penerima Manfaat'},
+      {text: 'Dari total '+uniq.toLocaleString()+' penerima manfaat unik, sebanyak '+gL.toLocaleString()+' orang berjenis kelamin laki-laki dan '+gP.toLocaleString()+' orang perempuan'+(uniq>0?' (rasio P:L = '+(gL>0?(gP/gL).toFixed(2):'—')+')':'')+'. Data ini berasal dari '+benef.length.toLocaleString()+' total catatan partisipasi kegiatan.'},
+      {text: 'Desa dengan penerima manfaat terbanyak adalah '+topDesa[0]+' dengan '+topDesa[1].toLocaleString()+' orang'+(uniq>0?' ('+(topDesa[1]/uniq*100).toFixed(1)+'% dari total)':'')+'. Kegiatan yang paling banyak menjangkau penerima manfaat adalah "'+topKeg[0]+'" dengan '+topKeg[1].toLocaleString()+' orang unik.'},
+      {heading: 'Penggunaan Dana'},
+      {text: 'Total pengeluaran PJUM mencapai '+fmt(cost)+' untuk melayani '+uniq.toLocaleString()+' penerima manfaat, sehingga rata-rata biaya per orang adalah '+fmtShort(rppAvg)+'. Rincian pengeluaran per program dan per staf dapat dilihat pada lampiran.'}
     ],
-    sections: [
-      {type:'heading', text:'Trend Beneficiary per Bulan'},
-      {type:'chart', canvasId:'ch-dash-benef-trend', height:50},
-      {type:'heading', text:'Distribusi Beneficiary per Desa', sub:'Top '+desaData.length+' desa'},
-      {type:'table', head:['#','Desa','Benef Unik','%'],
-        body: desaData.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
-      {type:'heading', text:'Top Kegiatan'},
-      {type:'table', head:['#','Kegiatan','Benef Unik','%'],
-        body: kegData.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
-      {type:'heading', text:'Pengeluaran PJUM per Bulan'},
-      {type:'chart', canvasId:'ch-dash-pjum-trend', height:50}
+    lampiran: [
+      {heading:'Tabel A1: Distribusi per Desa (Top '+desaData.length+')'},
+      {table:{head:['#','Desa','Benef Unik','%'], body:desaData.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})}},
+      {heading:'Tabel A2: Top Kegiatan'},
+      {table:{head:['#','Kegiatan','Benef Unik','%'], body:kegData.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})}},
+      {heading:'Grafik B1: Trend Beneficiary per Bulan'},
+      {chart:{canvasId:'ch-dash-benef-trend',height:55}},
+      {heading:'Grafik B2: Pengeluaran PJUM per Bulan'},
+      {chart:{canvasId:'ch-dash-pjum-trend',height:55}}
     ]
   });
 };

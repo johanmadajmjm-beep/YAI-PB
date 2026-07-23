@@ -626,20 +626,26 @@ window.exportLaporanPDF = function() {
     var bR=benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
     var c=pR.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     var bu=countUniqBenef(bR);
-    return [i+1,prog,fmtShort(c),pR.length,bR.length,bu,bu>0&&c>0?fmtShort(c/bu):'—'];
+    return {prog:prog, cost:c, trx:pR.length, rec:bR.length, uniq:bu, rpp:bu>0&&c>0?c/bu:0};
   });
+  var topProg=progRows.reduce(function(b,c){return c.cost>b.cost?c:b;},{prog:'—',cost:0});
+  var gL=countUniqByGender(benef,'L'), gP=countUniqByGender(benef,'P');
 
   buildPDF({
     title:'Laporan Komprehensif', subtitle:'Yayasan Ayo Indonesia', filterText:filterText, filename:'Laporan_Lengkap.pdf',
-    kpis:[{label:'Total PJUM',value:fmtShort(totalCost)},{label:'Transaksi',value:pjum.length.toLocaleString()},{label:'Benef Unik',value:uniq.toLocaleString()},{label:'Rp/Benef',value:uniq?fmtShort(totalCost/uniq):'—'}],
-    sections:[
-      {type:'heading',text:'Rekap per Program'},
-      {type:'table',head:['#','Program','Biaya','Trx','Records','Unik','Rp/Benef'],body:progRows},
-      {type:'spacer',height:6},
-      {type:'text',text:'Laporan ini dibuat otomatis berdasarkan data yang tersedia. '+
-        'Total biaya PJUM sebesar '+fmt(totalCost)+' mencakup '+pjum.length.toLocaleString()+' transaksi. '+
-        'Penerima manfaat unik berjumlah '+uniq.toLocaleString()+' orang '+
-        'dengan rata-rata biaya per orang sebesar '+(uniq?fmtShort(totalCost/uniq):'—')+'.'}
+    narrative:[
+      {heading:'Ringkasan Eksekutif'},
+      {text:'Laporan ini merangkum kinerja program Yayasan Ayo Indonesia berdasarkan data Pertanggungjawaban Uang Muka (PJUM) dan data penerima manfaat (beneficiary). Secara keseluruhan, total pengeluaran PJUM sebesar '+fmt(totalCost)+' telah digunakan untuk melayani '+uniq.toLocaleString()+' penerima manfaat unik melalui '+Object.keys(allProgMap).length+' program.'},
+      {text:'Rata-rata biaya per penerima manfaat adalah '+(uniq>0?fmtShort(totalCost/uniq):'—')+'. Dari sisi gender, terdapat '+gL.toLocaleString()+' laki-laki dan '+gP.toLocaleString()+' perempuan (rasio P:L = '+(gL>0?(gP/gL).toFixed(2):'—')+').'},
+      {heading:'Penggunaan Dana'},
+      {text:'Dana PJUM sebesar '+fmt(totalCost)+' tersalurkan melalui '+pjum.length.toLocaleString()+' transaksi. Program dengan pengeluaran terbesar adalah "'+topProg.prog+'" sebesar '+fmtShort(topProg.cost)+' ('+(totalCost>0?(topProg.cost/totalCost*100).toFixed(1):0)+'% dari total). Rincian lengkap per program tersedia pada Lampiran Tabel A1.'},
+      {heading:'Penerima Manfaat'},
+      {text:'Total '+uniq.toLocaleString()+' penerima manfaat unik tercatat dari '+benef.length.toLocaleString()+' catatan partisipasi kegiatan. Hal ini menunjukkan bahwa rata-rata setiap penerima manfaat mengikuti '+(uniq>0?(benef.length/uniq).toFixed(1):'—')+' kegiatan.'}
+    ],
+    lampiran:[
+      {heading:'Tabel A1: Rekap per Program'},
+      {table:{head:['#','Program','Biaya','Trx','Records','Unik','Rp/Benef'],
+        body:progRows.map(function(r,i){return [i+1,r.prog,fmtShort(r.cost),r.trx,r.rec,r.uniq,r.rpp>0?fmtShort(r.rpp):'—'];})}}
     ]
   });
 };

@@ -340,7 +340,6 @@ window.exportBenefPDF = function() {
   var gL = countUniqByGender(d,'L'), gP = countUniqByGender(d,'P');
   var desaS={}; d.forEach(function(r){if(r[B.desa])desaS[r[B.desa]]=1;});
   var progS={}; d.forEach(function(r){if(r[B.proyek])progS[r[B.proyek]]=1;});
-
   var filterText = getFilterSummary([
     {label:'Program',val:v('bf-proyek')},{label:'Staf',val:v('bf-staf')},
     {label:'Kategori',val:v('bf-kategori')},{label:'Kabupaten',val:v('bf-kab')},
@@ -348,38 +347,34 @@ window.exportBenefPDF = function() {
     {label:'Gender',val:v('bf-gender')},{label:'Tahun',val:v('bf-tahun')},
     {label:'Bulan',val:v('bf-bulan')?bulanName(v('bf-bulan')):''}
   ]);
-
   var byKat = topN(groupCountUniq(d,function(r){return r[B.kategori];}),10);
   var byDesa = topN(groupCountUniq(d,function(r){return r[B.desa];}),15);
   var byProg = topN(groupCountUniq(d,function(r){return r[B.proyek];}),10);
+  var topKat = byKat[0]||['—',0], topDesa = byDesa[0]||['—',0];
+
+  var disabCount=0,disabSeen={};
+  d.forEach(function(r){var k=benefKey(r);if(disabSeen[k])return;disabSeen[k]=1;var val=(r[B.disab]||'').trim().toLowerCase();if(val&&val!=='—'&&val!=='tidak'&&val!=='tidak ada'&&val!=='none'&&val!=='no'&&val!=='-')disabCount++;});
 
   buildPDF({
-    title: 'Laporan Data Beneficiary',
-    subtitle: 'Yayasan Ayo Indonesia — Analisis Penerima Manfaat',
-    filterText: filterText,
-    filename: 'Beneficiary_Report.pdf',
-    kpis: [
-      {label:'Benef Unik',value:uniq.toLocaleString()},
-      {label:'L / P',value:gL+' / '+gP},
-      {label:'Desa Tercakup',value:Object.keys(desaS).length},
-      {label:'Program',value:Object.keys(progS).length}
+    title:'Laporan Data Beneficiary', subtitle:'Yayasan Ayo Indonesia', filterText:filterText, filename:'Beneficiary_Report.pdf',
+    narrative:[
+      {heading:'Ringkasan'},
+      {text:'Berdasarkan data yang difilter, terdapat '+uniq.toLocaleString()+' penerima manfaat unik dari '+d.length.toLocaleString()+' total catatan partisipasi. Para penerima manfaat tersebar di '+Object.keys(desaS).length+' desa/kelurahan dan dilayani oleh '+Object.keys(progS).length+' program.'},
+      {heading:'Komposisi Gender'},
+      {text:'Dari total '+uniq.toLocaleString()+' penerima manfaat unik, '+gP.toLocaleString()+' orang ('+(uniq?(gP/uniq*100).toFixed(1):0)+'%) adalah perempuan dan '+gL.toLocaleString()+' orang ('+(uniq?(gL/uniq*100).toFixed(1):0)+'%) adalah laki-laki. Rasio perempuan terhadap laki-laki adalah '+(gL>0?(gP/gL).toFixed(2):'—')+'.'},
+      {heading:'Kategori Penerima Manfaat'},
+      {text:'Kategori terbesar adalah "'+topKat[0]+'" dengan '+topKat[1].toLocaleString()+' orang ('+(uniq?(topKat[1]/uniq*100).toFixed(1):0)+'%). '+byKat.slice(1,3).map(function(x){return '"'+x[0]+'" ('+x[1].toLocaleString()+' orang)';}).join(' dan ')+' menempati posisi berikutnya. Rincian lengkap tersedia pada Lampiran.'},
+      {heading:'Penyandang Disabilitas'},
+      {text:'Dari total penerima manfaat, sebanyak '+disabCount.toLocaleString()+' orang ('+(uniq?(disabCount/uniq*100).toFixed(1):0)+'%) teridentifikasi sebagai penyandang disabilitas. Sisanya sejumlah '+(uniq-disabCount).toLocaleString()+' orang tidak memiliki catatan disabilitas atau datanya kosong.'},
+      {heading:'Sebaran Wilayah'},
+      {text:'Desa dengan jumlah penerima manfaat terbanyak adalah '+topDesa[0]+' dengan '+topDesa[1].toLocaleString()+' orang. '+byDesa.slice(1,4).map(function(x){return x[0]+' ('+x[1]+')';}).join(', ')+' menempati posisi berikutnya.'}
     ],
-    sections: [
-      {type:'heading',text:'Trend Beneficiary per Bulan'},
-      {type:'chart',canvasId:'bch-trend',height:50},
-      {type:'heading',text:'Distribusi Gender'},
-      {type:'chart',canvasId:'bch-gender',height:45},
-      {type:'heading',text:'Distribusi per Kategori'},
-      {type:'table',head:['#','Kategori','Benef Unik','%'],
-        body:byKat.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Distribusi per Desa (Top 15)'},
-      {type:'table',head:['#','Desa','Benef Unik','%'],
-        body:byDesa.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Distribusi per Program'},
-      {type:'table',head:['#','Program','Benef Unik','%'],
-        body:byProg.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Grafik per Kategori'},
-      {type:'chart',canvasId:'bch-kategori',height:55}
+    lampiran:[
+      {heading:'Tabel A1: Per Kategori'},{table:{head:['#','Kategori','Benef Unik','%'],body:byKat.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})}},
+      {heading:'Tabel A2: Per Desa (Top 15)'},{table:{head:['#','Desa','Benef Unik','%'],body:byDesa.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})}},
+      {heading:'Tabel A3: Per Program'},{table:{head:['#','Program','Benef Unik','%'],body:byProg.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(1):0)+'%'];})}},
+      {heading:'Grafik B1: Trend per Bulan'},{chart:{canvasId:'bch-trend',height:55}},
+      {heading:'Grafik B2: Distribusi Gender'},{chart:{canvasId:'bch-gender',height:50}}
     ]
   });
 };

@@ -291,32 +291,27 @@ window.exportPjumPDF = function() {
   var byProg = topN(groupSum(d,function(r){return r[P.proyek];},function(r){return r[P.jumlah];}),10);
   var byStaf = topN(groupSum(d,function(r){return r[P.staf];},function(r){return r[P.jumlah];}),10);
   var byKomp = topN(groupSum(d,function(r){return classifyItem(r[P.item]);},function(r){return r[P.jumlah];}),10);
+  var topProg=byProg[0]||['—',0], topStaf=byStaf[0]||['—',0], topKomp=byKomp[0]||['—',0];
+  var avgTrx = d.length > 0 ? total/d.length : 0;
 
   buildPDF({
-    title: 'Laporan Penggunaan Dana (PJUM)',
-    subtitle: 'Yayasan Ayo Indonesia — Pertanggungjawaban Keuangan',
-    filterText: filterText,
-    filename: 'PJUM_Report.pdf',
-    kpis: [
-      {label:'Total Biaya',value:fmtShort(total)},
-      {label:'Transaksi',value:d.length.toLocaleString()},
-      {label:'Program',value:Object.keys(progsS).length},
-      {label:'Staf',value:Object.keys(stafS).length}
+    title:'Laporan Penggunaan Dana (PJUM)', subtitle:'Yayasan Ayo Indonesia', filterText:filterText, filename:'PJUM_Report.pdf',
+    narrative:[
+      {heading:'Ringkasan Penggunaan Dana'},
+      {text:'Total pengeluaran PJUM yang tercatat dalam periode ini adalah '+fmt(total)+' dari '+d.length.toLocaleString()+' transaksi. Dana tersebut dikelola oleh '+Object.keys(stafS).length+' staf untuk '+Object.keys(progsS).length+' program. Rata-rata nilai per transaksi adalah '+fmtShort(avgTrx)+'.'},
+      {heading:'Distribusi per Program'},
+      {text:'Program dengan pengeluaran terbesar adalah "'+topProg[0]+'" sebesar '+fmt(topProg[1])+' ('+(total?(topProg[1]/total*100).toFixed(1):0)+'% dari total). '+byProg.slice(1,3).map(function(x){return '"'+x[0]+'" ('+fmtShort(x[1])+')';}).join(' dan ')+' menempati posisi berikutnya.'},
+      {heading:'Distribusi per Staf'},
+      {text:'Staf dengan total pengeluaran terbesar adalah '+topStaf[0]+' dengan '+fmt(topStaf[1])+' ('+(total?(topStaf[1]/total*100).toFixed(1):0)+'%). Rincian lengkap per staf tersedia pada lampiran.'},
+      {heading:'Komponen Biaya'},
+      {text:'Komponen pengeluaran terbesar adalah "'+topKomp[0]+'" sebesar '+fmt(topKomp[1])+' ('+(total?(topKomp[1]/total*100).toFixed(1):0)+'%). Hal ini menunjukkan bahwa sebagian besar dana digunakan untuk keperluan '+topKomp[0].toLowerCase()+'.'}
     ],
-    sections: [
-      {type:'heading',text:'Trend Pengeluaran per Bulan'},
-      {type:'chart',canvasId:'pch-trend',height:50},
-      {type:'heading',text:'Pengeluaran per Program'},
-      {type:'table',head:['#','Program','Total Biaya','%'],
-        body:byProg.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Pengeluaran per Staf'},
-      {type:'table',head:['#','Staf','Total Biaya','%'],
-        body:byStaf.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Komponen Biaya'},
-      {type:'table',head:['#','Komponen','Total Biaya','%'],
-        body:byKomp.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})},
-      {type:'heading',text:'Grafik per Program'},
-      {type:'chart',canvasId:'pch-proyek',height:55}
+    lampiran:[
+      {heading:'Tabel A1: Per Program'},{table:{head:['#','Program','Total Biaya','%'],body:byProg.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
+      {heading:'Tabel A2: Per Staf'},{table:{head:['#','Staf','Total Biaya','%'],body:byStaf.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
+      {heading:'Tabel A3: Per Komponen'},{table:{head:['#','Komponen','Total Biaya','%'],body:byKomp.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
+      {heading:'Grafik B1: Trend Pengeluaran'},{chart:{canvasId:'pch-trend',height:55}},
+      {heading:'Grafik B2: Per Program'},{chart:{canvasId:'pch-proyek',height:55}}
     ]
   });
 };
