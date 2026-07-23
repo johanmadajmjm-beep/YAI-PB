@@ -238,17 +238,18 @@ body {
 .stat-grid.g5 .stat-value { font-size: 17px; }
 .stat-sub   { font-size: 10.5px; color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── EXPORT BUTTON ── */
+/* ── EXPORT BUTTON (icon-only) ── */
 .btn-export {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 14px; border-radius: 7px; border: 1px solid var(--border);
-  background: var(--card); color: var(--text2); font-size: 12px; font-weight: 600;
-  cursor: pointer; transition: all .15s; white-space: nowrap;
+  width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text2);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .15s; padding: 0; flex-shrink: 0;
 }
 .btn-export:hover { border-color: var(--orange); color: var(--orange); }
 .btn-export svg { flex-shrink: 0; }
 .btn-export.primary { background: var(--orange); color: #fff; border-color: var(--orange); }
 .btn-export.primary:hover { background: var(--orange-dk); }
+.btn-export.primary svg { stroke: #fff; }
 .export-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
 .page-header-left {}
