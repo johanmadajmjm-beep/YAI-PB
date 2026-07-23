@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23F97316%22/><rect x=%224.5%22 y=%2213%22 width=%224%22 height=%227%22 rx=%221.6%22 fill=%22white%22 opacity=%22.65%22/><rect x=%2210%22 y=%229%22 width=%224%22 height=%2211%22 rx=%221.6%22 fill=%22white%22 opacity=%22.85%22/><rect x=%2215.5%22 y=%224%22 width=%224%22 height=%2216%22 rx=%221.6%22 fill=%22white%22/></svg>"/>
 <title>YAI — Executive Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/style.css?v=20260723r7"/>
+<link rel="stylesheet" href="css/style.css?v=20260723r8"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -156,8 +156,8 @@
       <div class="chart-grid g-6-4">
         <div class="chart-card">
           <div class="chart-title">Beneficiary per Desa</div>
-          <div class="chart-sub">Sebaran penerima manfaat per desa/kelurahan</div>
-          <div class="rank-list" id="rank-desa" style="margin-top:8px"></div>
+          <div class="chart-sub">Top 10 desa/kelurahan dengan penerima manfaat terbanyak</div>
+          <div class="chart-wrap h260"><canvas id="dch-desa"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Pengeluaran PJUM per Bulan</div>
@@ -299,10 +299,10 @@
         <div class="tbl-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Nama</th><th>JK</th><th>Kat. Usia</th><th>Kategori</th>
-              <th>Disabilitas</th><th>Desa</th><th>Kecamatan</th><th>Kabupaten</th>
-              <th>Program</th><th>Kegiatan</th><th>Benefit</th>
-              <th>Staf</th><th>Tanggal</th><th>Kode</th>
+              <th class="th-sort" data-tbl="benef" data-col="0">Nama</th><th class="th-sort" data-tbl="benef" data-col="1">JK</th><th class="th-sort" data-tbl="benef" data-col="2">Kat. Usia</th><th class="th-sort" data-tbl="benef" data-col="3">Kategori</th>
+              <th class="th-sort" data-tbl="benef" data-col="4">Disabilitas</th><th class="th-sort" data-tbl="benef" data-col="5">Desa</th><th class="th-sort" data-tbl="benef" data-col="6">Kecamatan</th><th class="th-sort" data-tbl="benef" data-col="7">Kabupaten</th>
+              <th class="th-sort" data-tbl="benef" data-col="8">Program</th><th class="th-sort" data-tbl="benef" data-col="9">Kegiatan</th><th class="th-sort" data-tbl="benef" data-col="10">Benefit</th>
+              <th class="th-sort" data-tbl="benef" data-col="11">Staf</th><th class="th-sort" data-tbl="benef" data-col="12">Tanggal</th><th class="th-sort" data-tbl="benef" data-col="13">Kode</th>
             </tr></thead>
             <tbody id="benef-tbl-body"></tbody>
           </table>
@@ -409,9 +409,9 @@
         <div class="tbl-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>Tanggal</th><th>Staf</th><th>Program</th><th>Kode</th>
-              <th>Kegiatan</th><th>Item Pengeluaran</th><th>Komponen</th>
-              <th class="num">Jumlah (Rp)</th><th>File</th>
+              <th class="th-sort" data-tbl="pjum" data-col="0">Tanggal</th><th class="th-sort" data-tbl="pjum" data-col="1">Staf</th><th class="th-sort" data-tbl="pjum" data-col="2">Program</th><th class="th-sort" data-tbl="pjum" data-col="3">Kode</th>
+              <th class="th-sort" data-tbl="pjum" data-col="4">Kegiatan</th><th class="th-sort" data-tbl="pjum" data-col="5">Item Pengeluaran</th><th class="th-sort" data-tbl="pjum" data-col="6">Komponen</th>
+              <th class="num th-sort" data-tbl="pjum" data-col="7">Jumlah (Rp)</th><th class="th-sort" data-tbl="pjum" data-col="8">File</th>
             </tr></thead>
             <tbody id="pjum-tbl-body"></tbody>
           </table>
@@ -521,8 +521,8 @@
         <div class="tbl-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>#</th><th>Desa/Kelurahan</th><th>Kecamatan</th><th>Kabupaten</th>
-              <th class="num">Jumlah Benef</th><th class="num">%</th><th>Proporsi</th>
+              <th>#</th><th class="th-sort" data-tbl="wilayah" data-col="1">Desa/Kelurahan</th><th class="th-sort" data-tbl="wilayah" data-col="2">Kecamatan</th><th class="th-sort" data-tbl="wilayah" data-col="3">Kabupaten</th>
+              <th class="num th-sort" data-tbl="wilayah" data-col="4">Jumlah Benef</th><th class="num th-sort" data-tbl="wilayah" data-col="4">%</th><th>Proporsi</th>
             </tr></thead>
             <tbody id="wilayah-tbl-body"></tbody>
           </table>
@@ -687,10 +687,10 @@
         <div class="tbl-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>#</th><th>Program</th>
-              <th class="num">Total Biaya PJUM</th><th class="num">Transaksi</th>
-              <th class="num">Jumlah Benef</th><th class="num">Benef Unik</th>
-              <th class="num">Rp/Benef</th>
+              <th>#</th><th class="th-sort" data-tbl="lap-prog" data-col="1">Program</th>
+              <th class="num th-sort" data-tbl="lap-prog" data-col="2">Total Biaya PJUM</th><th class="num th-sort" data-tbl="lap-prog" data-col="3">Transaksi</th>
+              <th class="num th-sort" data-tbl="lap-prog" data-col="4">Jumlah Benef</th><th class="num th-sort" data-tbl="lap-prog" data-col="5">Benef Unik</th>
+              <th class="num th-sort" data-tbl="lap-prog" data-col="6">Rp/Benef</th>
             </tr></thead>
             <tbody id="laporan-prog-body"></tbody>
           </table>
@@ -703,9 +703,9 @@
         <div class="tbl-scroll">
           <table class="data-table">
             <thead><tr>
-              <th>#</th><th>Staf</th>
-              <th class="num">Biaya PJUM</th><th class="num">Transaksi PJUM</th>
-              <th class="num">Jumlah Benef</th>
+              <th>#</th><th class="th-sort" data-tbl="lap-staf" data-col="1">Staf</th>
+              <th class="num th-sort" data-tbl="lap-staf" data-col="2">Biaya PJUM</th><th class="num th-sort" data-tbl="lap-staf" data-col="3">Transaksi PJUM</th>
+              <th class="num th-sort" data-tbl="lap-staf" data-col="4">Jumlah Benef</th>
             </tr></thead>
             <tbody id="laporan-staf-body"></tbody>
           </table>
@@ -737,15 +737,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="js/utils.js?v=20260723r7"></script>
-<script src="js/api.js?v=20260723r7"></script>
-<script src="js/charts.js?v=20260723r7"></script>
-<script src="js/report-lib.js?v=20260723r7"></script>
-<script src="js/export.js?v=20260723r7"></script>
-<script src="js/app.js?v=20260723r7"></script>
-<script src="js/dashboard.js?v=20260723r7"></script>
-<script src="js/benef.js?v=20260723r7"></script>
-<script src="js/pjum.js?v=20260723r7"></script>
-<script src="js/pages.js?v=20260723r7"></script>
+<script src="js/utils.js?v=20260723r8"></script>
+<script src="js/api.js?v=20260723r8"></script>
+<script src="js/charts.js?v=20260723r8"></script>
+<script src="js/report-lib.js?v=20260723r8"></script>
+<script src="js/export.js?v=20260723r8"></script>
+<script src="js/app.js?v=20260723r8"></script>
+<script src="js/dashboard.js?v=20260723r8"></script>
+<script src="js/benef.js?v=20260723r8"></script>
+<script src="js/pjum.js?v=20260723r8"></script>
+<script src="js/pages.js?v=20260723r8"></script>
 </body>
 </html>
