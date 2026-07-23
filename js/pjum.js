@@ -270,48 +270,177 @@ window.changePjumPage=function(dir){
   renderPjumTable();
 };
 
-/* ── PJUM PDF Export ── */
+/* ══════════════════════════════════════════════════
+   PJUM PDF — Laporan Keuangan Lengkap
+══════════════════════════════════════════════════ */
 window.exportPjumPDF = function() {
   var P = window.P;
   var d = window.APP.pjum.filtered;
   var total = d.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-  var progsS={},stafS={},kodeS={};
+  var per = dataPeriod(d, P.tgl);
+
+  var progS={},stafS={},kodeS={},fileS={},kegS={};
   d.forEach(function(r){
-    if(r[P.proyek])progsS[r[P.proyek]]=1;
-    if(r[P.staf])stafS[r[P.staf]]=1;
-    if(r[P.kode])kodeS[r[P.kode]]=1;
+    if(r[P.proyek])progS[r[P.proyek]]=1; if(r[P.staf])stafS[r[P.staf]]=1;
+    if(r[P.kode])kodeS[r[P.kode]]=1; if(r[P.file])fileS[r[P.file]]=1;
+    if(r[P.kegiatan])kegS[r[P.kegiatan]]=1;
   });
 
+  var byProg = topN(groupSum(d,function(r){return r[P.proyek];},function(r){return r[P.jumlah];}),20);
+  var byStaf = topN(groupSum(d,function(r){return r[P.staf];},function(r){return r[P.jumlah];}),20);
+  var byKomp = topN(groupSum(d,function(r){return classifyItem(r[P.item]);},function(r){return r[P.jumlah];}),15);
+  var byKode = topN(groupSum(d,function(r){return r[P.kode];},function(r){return r[P.jumlah];}),20);
+  var byKeg  = topN(groupSum(d,function(r){return r[P.kegiatan];},function(r){return r[P.jumlah];}),20);
+  var peakP = peakMonths(d, P.tgl, 'sum', P.jumlah);
+
+  /* Rekap tahunan */
+  var years = getYears(d, P.tgl);
+  var yearly = calcGrowth(years.map(function(y){
+    var rows = d.filter(function(r){var t=validTgl(r[P.tgl]);return t&&t.slice(0,4)===y;});
+    var c = rows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    var pr={},st={},fl={};
+    rows.forEach(function(r){if(r[P.proyek])pr[r[P.proyek]]=1;if(r[P.staf])st[r[P.staf]]=1;if(r[P.file])fl[r[P.file]]=1;});
+    return {tahun:y, biaya:c, trx:rows.length, program:Object.keys(pr).length,
+      staf:Object.keys(st).length, file:Object.keys(fl).length,
+      avgTrx: rows.length>0?c/rows.length:0};
+  }),'biaya');
+
+  /* Komponen per tahun */
+  var kompNames = byKomp.slice(0,6).map(function(x){return x[0];});
+  var kompYear = years.map(function(y){
+    var rows = d.filter(function(r){var t=validTgl(r[P.tgl]);return t&&t.slice(0,4)===y;});
+    var row = {tahun:y};
+    kompNames.forEach(function(k){
+      row[k] = rows.filter(function(r){return classifyItem(r[P.item])===k;})
+                   .reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+    });
+    return row;
+  });
+
+  /* Statistik transaksi */
+  var vals = d.map(function(r){return parseFloat(r[P.jumlah])||0;}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
+  var median = vals.length ? (vals.length%2 ? vals[(vals.length-1)/2] : (vals[vals.length/2-1]+vals[vals.length/2])/2) : 0;
+  var maxTrx = vals.length ? vals[vals.length-1] : 0;
+  var minTrx = vals.length ? vals[0] : 0;
+
+  var completeP = columnCompleteness(d, [
+    {idx:P.tgl,label:'Tanggal',isDate:true},{idx:P.staf,label:'Staf'},{idx:P.proyek,label:'Program'},
+    {idx:P.kode,label:'Kode Kegiatan'},{idx:P.kegiatan,label:'Nama Kegiatan'},
+    {idx:P.item,label:'Item Pengeluaran'},{idx:P.jumlah,label:'Jumlah'},{idx:P.file,label:'File Sumber'}
+  ]);
+
+  var anomali = detectAnomalies([], d);
   var filterText = getFilterSummary([
     {label:'Program',val:v('pf-proyek')},{label:'Staf',val:v('pf-staf')},
     {label:'Kode',val:v('pf-kode')},{label:'Tahun',val:v('pf-tahun')},
     {label:'Bulan',val:v('pf-bulan')?bulanName(v('pf-bulan')):''}
   ]);
 
-  var byProg = topN(groupSum(d,function(r){return r[P.proyek];},function(r){return r[P.jumlah];}),10);
-  var byStaf = topN(groupSum(d,function(r){return r[P.staf];},function(r){return r[P.jumlah];}),10);
-  var byKomp = topN(groupSum(d,function(r){return classifyItem(r[P.item]);},function(r){return r[P.jumlah];}),10);
   var topProg=byProg[0]||['—',0], topStaf=byStaf[0]||['—',0], topKomp=byKomp[0]||['—',0];
-  var avgTrx = d.length > 0 ? total/d.length : 0;
+  var concProg = concentrationIndex(byProg.map(function(x){return x[1];}));
+  var concStaf = concentrationIndex(byStaf.map(function(x){return x[1];}));
+  var avgTrx = d.length>0 ? total/d.length : 0;
 
   buildPDF({
-    title:'Laporan Penggunaan Dana (PJUM)', subtitle:'Yayasan Ayo Indonesia', filterText:filterText, filename:'PJUM_Report.pdf',
-    narrative:[
-      {heading:'Ringkasan Penggunaan Dana'},
-      {text:'Total pengeluaran PJUM yang tercatat dalam periode ini adalah '+fmt(total)+' dari '+d.length.toLocaleString()+' transaksi. Dana tersebut dikelola oleh '+Object.keys(stafS).length+' staf untuk '+Object.keys(progsS).length+' program. Rata-rata nilai per transaksi adalah '+fmtShort(avgTrx)+'.'},
-      {heading:'Distribusi per Program'},
-      {text:'Program dengan pengeluaran terbesar adalah "'+topProg[0]+'" sebesar '+fmt(topProg[1])+' ('+(total?(topProg[1]/total*100).toFixed(1):0)+'% dari total). '+byProg.slice(1,3).map(function(x){return '"'+x[0]+'" ('+fmtShort(x[1])+')';}).join(' dan ')+' menempati posisi berikutnya.'},
-      {heading:'Distribusi per Staf'},
-      {text:'Staf dengan total pengeluaran terbesar adalah '+topStaf[0]+' dengan '+fmt(topStaf[1])+' ('+(total?(topStaf[1]/total*100).toFixed(1):0)+'%). Rincian lengkap per staf tersedia pada lampiran.'},
-      {heading:'Komponen Biaya'},
-      {text:'Komponen pengeluaran terbesar adalah "'+topKomp[0]+'" sebesar '+fmt(topKomp[1])+' ('+(total?(topKomp[1]/total*100).toFixed(1):0)+'%). Hal ini menunjukkan bahwa sebagian besar dana digunakan untuk keperluan '+topKomp[0].toLowerCase()+'.'}
+    title:'Laporan Penggunaan Dana', subtitle:'Yayasan Ayo Indonesia — PJUM',
+    filterText:filterText, filename:'Laporan_PJUM.pdf',
+    meta:{ periode: per?fmtPeriod(per.start)+' – '+fmtPeriod(per.end):'Tidak tersedia',
+           sumber:'Google Sheets YAI — Sheet PJUM' },
+    body:[
+      {section:'I. Ringkasan Eksekutif'},
+      {text:'Laporan ini menyajikan analisis penggunaan dana berdasarkan dokumen Pertanggungjawaban Uang Muka (PJUM)'+(per?' pada periode '+fmtPeriod(per.start)+' hingga '+fmtPeriod(per.end):'')+'.'},
+      {text:'Total dana yang tersalurkan mencapai '+fmt(total)+' melalui '+d.length.toLocaleString()+' transaksi yang terekam dalam '+Object.keys(fileS).length+' dokumen PJUM. Dana dikelola oleh '+Object.keys(stafS).length+' staf untuk membiayai '+Object.keys(progS).length+' program dan '+Object.keys(kegS).length+' jenis kegiatan.'},
+      {kv:[
+        ['Total Dana Tersalurkan', fmt(total)],
+        ['Jumlah Transaksi', d.length.toLocaleString()],
+        ['Dokumen PJUM', Object.keys(fileS).length.toLocaleString()+' file'],
+        ['Rata-rata per Transaksi', fmt(avgTrx)],
+        ['Median Transaksi', fmt(median)],
+        ['Transaksi Terbesar', fmt(maxTrx)],
+        ['Transaksi Terkecil', fmt(minTrx)],
+        ['Jumlah Program', Object.keys(progS).length.toString()],
+        ['Jumlah Staf', Object.keys(stafS).length.toString()],
+        ['Kode Kegiatan (RAB)', Object.keys(kodeS).length.toString()]
+      ]},
+      {callout:'Rata-rata nilai transaksi '+fmt(avgTrx)+' dengan median '+fmt(median)+'. '+(avgTrx>median*1.5?'Selisih yang cukup besar antara rata-rata dan median menunjukkan adanya beberapa transaksi bernilai sangat besar yang menarik rata-rata ke atas.':'Rata-rata dan median relatif berdekatan, menunjukkan distribusi nilai transaksi yang cukup merata.')},
+
+      {section:'II. Analisis Temporal'},
+      {text: yearly.length ? 'Realisasi anggaran dari tahun ke tahun. '+describeTrend(yearly,'biaya') : 'Data temporal tidak tersedia.'},
+      yearly.length ? {table:{title:'Tabel 2.1 — Realisasi Anggaran per Tahun',
+        head:['Tahun','Total Biaya','Δ%','Transaksi','Rata-rata/Trx','Program','Staf','File'],
+        body:yearly.map(function(r){return [r.tahun,fmt(r.biaya),
+          r.growth===null?'—':(r.growth>=0?'+':'')+r.growth.toFixed(1)+'%',
+          r.trx.toLocaleString(),fmtShort(r.avgTrx),r.program,r.staf,r.file];})}} : {spacer:0},
+      peakP ? {text:'Bulan dengan realisasi tertinggi adalah '+fmtPeriod(peakP.top[0])+' sebesar '+fmt(peakP.top[1])+', dan terendah pada '+fmtPeriod(peakP.bottom[0])+' sebesar '+fmt(peakP.bottom[1])+'. Rata-rata pengeluaran bulanan '+fmt(peakP.avg)+'.'} : {spacer:0},
+      {chart:{canvasId:'pch-trend', height:52, title:'Grafik 2.1 — Tren Pengeluaran per Bulan'}},
+
+      {section:'III. Analisis per Program'},
+      {text: byProg.length ? 'Program dengan realisasi terbesar adalah "'+topProg[0]+'" sebesar '+fmt(topProg[1])+' ('+(total?(topProg[1]/total*100).toFixed(1):0)+'% dari total)'+(byProg.length>1?', diikuti "'+byProg[1][0]+'" ('+fmtShort(byProg[1][1])+')':'')+(byProg.length>2?' dan "'+byProg[2][0]+'" ('+fmtShort(byProg[2][1])+')':'')+'.' : ''},
+      {text:'Indeks konsentrasi anggaran antar program adalah '+concProg.toFixed(1)+'/100, menunjukkan alokasi yang '+(concProg>50?'terkonsentrasi pada sedikit program':concProg>25?'cukup terdistribusi dengan beberapa program dominan':'tersebar merata antar program')+'.'},
+      {table:{title:'Tabel 3.1 — Realisasi per Program',
+        head:['#','Program','Total Biaya','% Total','Transaksi','Rata-rata/Trx'],
+        body:byProg.map(function(x,i){
+          var n=d.filter(function(r){return r[P.proyek]===x[0];}).length;
+          return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%',n,fmtShort(n>0?x[1]/n:0)];
+        })}},
+      {chart:{canvasId:'pch-proyek', height:55, title:'Grafik 3.1 — Realisasi per Program'}},
+
+      {section:'IV. Struktur Komponen Biaya'},
+      {text: byKomp.length ? 'Komponen pengeluaran terbesar adalah "'+topKomp[0]+'" sebesar '+fmt(topKomp[1])+' ('+(total?(topKomp[1]/total*100).toFixed(1):0)+'% dari total). Struktur ini menunjukkan bahwa alokasi terbesar diarahkan pada '+topKomp[0].toLowerCase()+'.' : ''},
+      {table:{title:'Tabel 4.1 — Komponen Biaya',
+        head:['#','Komponen','Total Biaya','% Total','Transaksi'],
+        body:byKomp.map(function(x,i){
+          var n=d.filter(function(r){return classifyItem(r[P.item])===x[0];}).length;
+          return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%',n.toLocaleString()];
+        })}},
+      kompYear.length>1 ? {heading:'4.1 Perkembangan Komponen per Tahun'} : {spacer:0},
+      kompYear.length>1 ? {table:{title:'Tabel 4.2 — Komponen Biaya per Tahun',
+        head:['Tahun'].concat(kompNames),
+        body:kompYear.map(function(r){return [r.tahun].concat(kompNames.map(function(k){return fmtShort(r[k]||0);}));})}} : {spacer:0},
+
+      {section:'V. Analisis per Staf'},
+      {text: byStaf.length ? 'Staf dengan pengelolaan dana terbesar adalah '+topStaf[0]+' sebesar '+fmt(topStaf[1])+' ('+(total?(topStaf[1]/total*100).toFixed(1):0)+'%). Indeks konsentrasi antar staf '+concStaf.toFixed(1)+'/100, menunjukkan '+(concStaf>50?'beban pengelolaan terpusat pada sedikit staf':'beban pengelolaan cukup terdistribusi')+'.' : ''},
+      {table:{title:'Tabel 5.1 — Realisasi per Staf',
+        head:['#','Staf','Total Biaya','% Total','Transaksi','Rata-rata/Trx'],
+        body:byStaf.map(function(x,i){
+          var n=d.filter(function(r){return r[P.staf]===x[0];}).length;
+          return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%',n.toLocaleString(),fmtShort(n>0?x[1]/n:0)];
+        })}},
+      {chart:{canvasId:'pch-staf', height:55, title:'Grafik 5.1 — Realisasi per Staf'}},
+
+      {section:'VI. Kode Kegiatan (RAB)'},
+      {text: byKode.length ? 'Terdapat '+Object.keys(kodeS).length+' kode kegiatan berbeda. Kode dengan realisasi terbesar adalah "'+byKode[0][0]+'" sebesar '+fmt(byKode[0][1])+' ('+(total?(byKode[0][1]/total*100).toFixed(1):0)+'%). Rincian lengkap pada Lampiran Tabel A1.' : 'Data kode kegiatan belum tersedia.'},
+      {chart:{canvasId:'pch-kode', height:55, title:'Grafik 6.1 — Realisasi per Kode Kegiatan'}},
+
+      {section:'VII. Kualitas Data'},
+      {text:'Penilaian kelengkapan data PJUM yang menjadi dasar laporan ini.'},
+      {table:{title:'Tabel 7.1 — Kelengkapan Kolom',
+        head:['Kolom','Terisi','Kosong','% Lengkap'],
+        body:completeP.map(function(c){return [c.nama,c.terisi.toLocaleString(),c.kosong.toLocaleString(),c.pct.toFixed(1)+'%'];})}},
+      anomali.length ? {table:{title:'Tabel 7.2 — Anomali Terdeteksi',
+        head:['Jenis','Jumlah','Keterangan'],
+        body:anomali.map(function(a){return [a.jenis,a.jml.toLocaleString(),a.ket];})}} : {text:'Tidak ditemukan anomali signifikan.'},
+
+      {section:'VIII. Kesimpulan'},
+      {text:'Total realisasi '+fmt(total)+' melalui '+d.length.toLocaleString()+' transaksi. '+(yearly.length?describeTrend(yearly,'biaya'):'')},
+      {bullet:'Konsentrasi program: '+concProg.toFixed(0)+'/100 — '+(concProg>50?'alokasi terpusat, perlu evaluasi pemerataan':'alokasi sudah cukup terdistribusi')},
+      {bullet:'Konsentrasi staf: '+concStaf.toFixed(0)+'/100 — '+(concStaf>50?'beban pengelolaan terpusat':'beban terdistribusi baik')},
+      {bullet:'Komponen dominan: '+topKomp[0]+' ('+(total?(topKomp[1]/total*100).toFixed(1):0)+'% dari total)'},
+      {bullet:'Rata-rata transaksi '+fmt(avgTrx)+', median '+fmt(median)}
     ],
     lampiran:[
-      {heading:'Tabel A1: Per Program'},{table:{head:['#','Program','Total Biaya','%'],body:byProg.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
-      {heading:'Tabel A2: Per Staf'},{table:{head:['#','Staf','Total Biaya','%'],body:byStaf.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
-      {heading:'Tabel A3: Per Komponen'},{table:{head:['#','Komponen','Total Biaya','%'],body:byKomp.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(1):0)+'%'];})}},
-      {heading:'Grafik B1: Trend Pengeluaran'},{chart:{canvasId:'pch-trend',height:55}},
-      {heading:'Grafik B2: Per Program'},{chart:{canvasId:'pch-proyek',height:55}}
-    ]
+      {table:{title:'Tabel A1 — Realisasi per Kode Kegiatan',
+        head:['#','Kode','Total Biaya','% Total'],
+        body:byKode.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(2):0)+'%'];})}},
+      {table:{title:'Tabel A2 — Realisasi per Nama Kegiatan',
+        head:['#','Kegiatan','Total Biaya','% Total'],
+        body:byKeg.map(function(x,i){return [i+1,x[0],fmt(x[1]),(total?(x[1]/total*100).toFixed(2):0)+'%'];})}},
+      {chart:{canvasId:'pch-kegiatan', height:55, title:'Grafik A1 — Realisasi per Nama Kegiatan'}}
+    ],
+    metodologi: stdMetodologi([
+      'Komponen biaya diklasifikasikan otomatis berdasarkan kata kunci pada kolom item pengeluaran. Item yang tidak cocok dengan kata kunci mana pun masuk kategori "Lainnya".',
+      'Median transaksi dihitung dari transaksi bernilai lebih dari nol.',
+      'Indeks konsentrasi menggunakan HHI ternormalisasi (0–100). Nilai tinggi berarti alokasi terpusat pada sedikit entitas.'
+    ])
   });
 };

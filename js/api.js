@@ -168,11 +168,12 @@ async function fetchRawData(force) {
 }
 
 /* ── helpers ── */
-window.fmt = function(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); };
+window.fmt = function(n) { return 'Rp ' + Math.round(Number(n)||0).toLocaleString('id-ID'); };
 window.fmtShort = function(n) {
+  n = Number(n) || 0;
   if (n >= 1e9) return 'Rp ' + (n/1e9).toFixed(2) + ' M';
   if (n >= 1e6) return 'Rp ' + (n/1e6).toFixed(1) + ' jt';
-  return 'Rp ' + Number(n).toLocaleString('id-ID');
+  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
 };
 window.bulanName = function(m) {
   return ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][parseInt(m)-1] || m;

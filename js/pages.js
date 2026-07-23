@@ -18,13 +18,149 @@ renderWilayahTable();}
 function renderWilayahTable(){var B=window.B,d=window.APP.wilayah.filtered;var bd=topN(groupCountUniq(d,function(r){return r[B.desa];}),200),dt=bd.reduce(function(s,x){return s+x[1];},0)||1,st=window.APP.wilayah.page*20,sl=bd.slice(st,st+20),lu={};d.forEach(function(r){if(r[B.desa]&&!lu[r[B.desa]])lu[r[B.desa]]={kec:r[B.kec],kab:r[B.kab]};});var tb=document.getElementById('wilayah-tbl-body');if(!tb)return;tb.innerHTML=sl.length?sl.map(function(x,i){var inf=lu[x[0]]||{},pc=bd[0]?x[1]/bd[0][1]*100:0;return '<tr><td>'+(st+i+1)+'</td><td><strong>'+x[0]+'</strong></td><td>'+(inf.kec||'—')+'</td><td>'+(inf.kab||'—')+'</td><td class="num">'+x[1].toLocaleString()+'</td><td class="num">'+(x[1]/dt*100).toFixed(1)+'%</td><td><div class="rank-bar" style="width:100px"><div class="rank-bar-fill" style="width:'+pc+'%"></div></div></td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Tidak ada data</td></tr>';setEl('wilayah-pg-info',(st+1)+'–'+Math.min(st+20,bd.length)+' dari '+bd.length+' desa');var pb=document.getElementById('wilayah-pg-prev'),nb=document.getElementById('wilayah-pg-next');if(pb)pb.disabled=window.APP.wilayah.page===0;if(nb)nb.disabled=st+20>=bd.length;}
 window.changeWilayahPage=function(dir){window.APP.wilayah.page=Math.max(0,window.APP.wilayah.page+dir);renderWilayahTable();};
 
-/* ── Wilayah PDF Export — Narrative ── */
-window.exportWilayahPDF=function(){var B=window.B,d=window.APP.wilayah.filtered,ut=countUniqBenef(d);var kabS={},kecS={},desaS={};d.forEach(function(r){if(r[B.kab])kabS[r[B.kab]]=1;if(r[B.kec])kecS[r[B.kec]]=1;if(r[B.desa])desaS[r[B.desa]]=1;});var ft=getFilterSummary([{label:'Program',val:v('wf-proyek')},{label:'Tahun',val:v('wf-tahun')}]);var bd=topN(groupCountUniq(d,function(r){return r[B.desa];}),30);var lu={};d.forEach(function(r){if(r[B.desa]&&!lu[r[B.desa]])lu[r[B.desa]]={kec:r[B.kec],kab:r[B.kab]};});var td=bd[0]||['—',0];
-buildPDF({title:'Laporan Sebaran Wilayah',subtitle:'Yayasan Ayo Indonesia',filterText:ft,filename:'Wilayah_Report.pdf',
-narrative:[{heading:'Ringkasan Sebaran'},{text:'Berdasarkan data yang tersedia, program telah menjangkau '+ut.toLocaleString()+' penerima manfaat unik yang tersebar di '+Object.keys(desaS).length+' desa/kelurahan, '+Object.keys(kecS).length+' kecamatan, dan '+Object.keys(kabS).length+' kabupaten/kota.'},{heading:'Konsentrasi Wilayah'},{text:'Desa dengan penerima manfaat terbanyak adalah '+td[0]+' dengan '+td[1].toLocaleString()+' orang ('+(ut?(td[1]/ut*100).toFixed(1):0)+'% dari total). '+bd.slice(1,4).map(function(x){return x[0]+' ('+x[1]+')';}).join(', ')+' menempati posisi berikutnya.'},{text:'Distribusi ini menunjukkan '+(bd[0]&&bd[0][1]>ut*0.3?'konsentrasi yang cukup tinggi pada satu wilayah':'penyebaran yang relatif merata antar wilayah')+'. Rincian lengkap per desa tersedia pada lampiran.'}],
-lampiran:[{heading:'Tabel A1: Rekap per Desa'},{table:{head:['#','Desa','Kecamatan','Kabupaten','Benef Unik','%'],body:bd.map(function(x,i){var inf=lu[x[0]]||{};return [i+1,x[0],inf.kec||'—',inf.kab||'—',x[1].toLocaleString(),(ut?(x[1]/ut*100).toFixed(1):0)+'%'];})}},{heading:'Grafik B1: Per Kabupaten'},{chart:{canvasId:'wch-kab',height:55}}]});};
 
+/* ══════════════════════════════════════════════════
+   Wilayah PDF — Laporan Sebaran Lengkap
+══════════════════════════════════════════════════ */
+window.exportWilayahPDF = function() {
+  var B = window.B;
+  var d = window.APP.wilayah.filtered;
+  var uniq = countUniqBenef(d);
+  var per = dataPeriod(d, B.tgl);
+  var hier = wilayahHierarchy(d);
+  var desaMap = desaProgramMap(d);
+  var g = genderBreakdown(d);
+  var disab = disabilityBreakdown(d);
 
+  var kabS={},kecS={},desaS={},progS={};
+  d.forEach(function(r){ if(r[B.kab])kabS[r[B.kab]]=1; if(r[B.kec])kecS[r[B.kec]]=1; if(r[B.desa])desaS[r[B.desa]]=1; if(r[B.proyek])progS[r[B.proyek]]=1; });
+
+  var byDesa = topN(groupCountUniq(d,function(r){return r[B.desa];}),40);
+  var byKec  = topN(groupCountUniq(d,function(r){return r[B.kec];}),30);
+  var lu={}; d.forEach(function(r){ if(r[B.desa]&&!lu[r[B.desa]]) lu[r[B.desa]]={kec:r[B.kec],kab:r[B.kab]}; });
+  var luKec={}; d.forEach(function(r){ if(r[B.kec]&&!luKec[r[B.kec]]) luKec[r[B.kec]]=r[B.kab]; });
+
+  var underServed = desaMap.filter(function(x){return x.n===1;});
+  var wellServed  = desaMap.filter(function(x){return x.n>=3;});
+  var concDesa = concentrationIndex(byDesa.map(function(x){return x[1];}));
+  var concKab  = concentrationIndex(hier.map(function(x){return x.uniq;}));
+
+  /* Gender per kabupaten */
+  var genderKab = hier.map(function(h){
+    var rows = d.filter(function(r){return (r[B.kab]||'(Tidak Diisi)')===h.kab;});
+    var gg = genderBreakdown(rows);
+    return {kab:h.kab, L:gg.L, P:gg.P, total:gg.total, rasio:gg.rasio};
+  });
+
+  /* Rekap tahunan wilayah */
+  var years = getYears(d, B.tgl);
+  var yearly = calcGrowth(years.map(function(y){
+    var rows = d.filter(function(r){var t=validTgl(r[B.tgl]);return t&&t.slice(0,4)===y;});
+    var ds={},kc={},kb={};
+    rows.forEach(function(r){if(r[B.desa])ds[r[B.desa]]=1;if(r[B.kec])kc[r[B.kec]]=1;if(r[B.kab])kb[r[B.kab]]=1;});
+    return {tahun:y, uniq:countUniqBenef(rows), desa:Object.keys(ds).length,
+      kec:Object.keys(kc).length, kab:Object.keys(kb).length};
+  }),'desa');
+
+  var ft = getFilterSummary([{label:'Program',val:v('wf-proyek')},{label:'Tahun',val:v('wf-tahun')}]);
+  var topDesa = byDesa[0]||['—',0];
+  var topKab = hier[0]||{kab:'—',uniq:0,desa:0,kec:0};
+
+  buildPDF({
+    title:'Laporan Sebaran Wilayah', subtitle:'Yayasan Ayo Indonesia',
+    filterText:ft, filename:'Laporan_Wilayah.pdf',
+    meta:{ periode: per?fmtPeriod(per.start)+' – '+fmtPeriod(per.end):'Tidak tersedia',
+           sumber:'Google Sheets YAI — Sheet Beneficiary' },
+    body:[
+      {section:'I. Ringkasan Eksekutif'},
+      {text:'Laporan ini menganalisis sebaran geografis penerima manfaat program Yayasan Ayo Indonesia'+(per?' pada periode '+fmtPeriod(per.start)+' hingga '+fmtPeriod(per.end):'')+'.'},
+      {text:'Program menjangkau '+uniq.toLocaleString()+' penerima manfaat unik yang tersebar di '+Object.keys(desaS).length+' desa/kelurahan, '+Object.keys(kecS).length+' kecamatan, dan '+Object.keys(kabS).length+' kabupaten/kota melalui '+Object.keys(progS).length+' program.'},
+      {kv:[
+        ['Penerima Manfaat Unik', uniq.toLocaleString()+' orang'],
+        ['Kabupaten/Kota', Object.keys(kabS).length.toString()],
+        ['Kecamatan', Object.keys(kecS).length.toString()],
+        ['Desa/Kelurahan', Object.keys(desaS).length.toString()],
+        ['Rata-rata per Desa', Object.keys(desaS).length>0?Math.round(uniq/Object.keys(desaS).length)+' orang':'—'],
+        ['Desa Under-Served', underServed.length+' desa (1 program saja)'],
+        ['Desa Terlayani Baik', wellServed.length+' desa (3+ program)'],
+        ['Indeks Konsentrasi Desa', concDesa.toFixed(1)+' / 100']
+      ]},
+      {callout:'Indeks konsentrasi '+concDesa.toFixed(1)+'/100 menunjukkan sebaran '+(concDesa>50?'terkonsentrasi pada sedikit desa — perlu perluasan jangkauan':concDesa>25?'cukup merata dengan beberapa desa dominan':'sangat merata antar desa')+'.'},
+
+      {section:'II. Hierarki Wilayah'},
+      {text:'Bagian ini menyajikan sebaran bertingkat dari kabupaten hingga desa. Kabupaten dengan jangkauan terbesar adalah '+topKab.kab+' dengan '+topKab.uniq.toLocaleString()+' penerima manfaat ('+(uniq?(topKab.uniq/uniq*100).toFixed(1):0)+'%) yang tersebar di '+topKab.desa+' desa pada '+topKab.kec+' kecamatan.'},
+      {table:{title:'Tabel 2.1 — Rekap per Kabupaten/Kota',
+        head:['#','Kabupaten/Kota','Kecamatan','Desa','Benef Unik','% Total','Rata-rata/Desa'],
+        body:hier.map(function(h,i){return [i+1,h.kab,h.kec,h.desa,h.uniq.toLocaleString(),
+          (uniq?(h.uniq/uniq*100).toFixed(1):0)+'%', h.desa>0?Math.round(h.uniq/h.desa):'—'];})}},
+      {text:'Indeks konsentrasi antar kabupaten adalah '+concKab.toFixed(1)+'/100. '+(concKab>50?'Sebagian besar penerima manfaat terpusat di sedikit kabupaten.':'Sebaran antar kabupaten relatif berimbang.')},
+      {chart:{canvasId:'wch-kab', height:55, title:'Grafik 2.1 — Sebaran per Kabupaten'}},
+      {table:{title:'Tabel 2.2 — Rekap per Kecamatan (30 Terbesar)',
+        head:['#','Kecamatan','Kabupaten','Benef Unik','% Total'],
+        body:byKec.map(function(x,i){return [i+1,x[0],luKec[x[0]]||'—',x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(2):0)+'%'];})}},
+      {chart:{canvasId:'wch-kec', height:55, title:'Grafik 2.2 — Sebaran per Kecamatan'}},
+
+      {section:'III. Analisis Tingkat Desa'},
+      {text:'Desa dengan jangkauan terbesar adalah '+topDesa[0]+' dengan '+topDesa[1].toLocaleString()+' penerima manfaat ('+(uniq?(topDesa[1]/uniq*100).toFixed(2):0)+'% dari total). Rata-rata setiap desa menjangkau '+(Object.keys(desaS).length>0?Math.round(uniq/Object.keys(desaS).length):0)+' orang.'},
+      {chart:{canvasId:'wch-desa', height:55, title:'Grafik 3.1 — Sebaran per Desa'}},
+
+      {section:'IV. Cakupan Layanan'},
+      {text:'Bagian ini menilai seberapa terintegrasi layanan di setiap desa, diukur dari berapa banyak program yang beroperasi di desa tersebut.'},
+      {kv:[
+        ['Total Desa Terjangkau', desaMap.length.toString()],
+        ['Dilayani 1 Program', underServed.length+' desa ('+(desaMap.length?(underServed.length/desaMap.length*100).toFixed(1):0)+'%)'],
+        ['Dilayani 2 Program', desaMap.filter(function(x){return x.n===2;}).length+' desa'],
+        ['Dilayani 3+ Program', wellServed.length+' desa ('+(desaMap.length?(wellServed.length/desaMap.length*100).toFixed(1):0)+'%)'],
+        ['Cakupan Tertinggi', desaMap.length?desaMap[0].desa+' ('+desaMap[0].n+' program)':'—']
+      ]},
+      {text:'Sebanyak '+underServed.length+' desa ('+(desaMap.length?(underServed.length/desaMap.length*100).toFixed(1):0)+'%) hanya dilayani oleh satu program. Desa-desa ini berpotensi menjadi prioritas untuk perluasan layanan agar intervensi lebih terintegrasi dan berdampak.'},
+      {text: wellServed.length ? 'Di sisi lain, '+wellServed.length+' desa sudah dilayani oleh 3 program atau lebih, menunjukkan konsentrasi intervensi yang baik di wilayah tersebut.' : ''},
+
+      {section:'V. Profil Demografis per Wilayah'},
+      {text:'Komposisi gender penerima manfaat di setiap kabupaten. Rasio P:L mendekati 1,00 menunjukkan keseimbangan gender yang baik.'},
+      {table:{title:'Tabel 5.1 — Komposisi Gender per Kabupaten',
+        head:['#','Kabupaten','Laki-laki','Perempuan','Total','Rasio P:L'],
+        body:genderKab.map(function(x,i){return [i+1,x.kab,x.L.toLocaleString(),x.P.toLocaleString(),
+          x.total.toLocaleString(), x.rasio!==null?x.rasio.toFixed(2):'—'];})}},
+      {chart:{canvasId:'wch-gender', height:48, title:'Grafik 5.1 — Distribusi Gender Keseluruhan'}},
+      {text:'Secara keseluruhan, rasio perempuan terhadap laki-laki adalah '+(g.rasio!==null?g.rasio.toFixed(2):'—')+' dengan '+g.P.toLocaleString()+' perempuan dan '+g.L.toLocaleString()+' laki-laki. Penyandang disabilitas berjumlah '+disab.adaDisab.toLocaleString()+' orang ('+(disab.total?(disab.adaDisab/disab.total*100).toFixed(1):0)+'%).'},
+
+      {section:'VI. Perkembangan Cakupan'},
+      {text: yearly.length ? 'Perkembangan cakupan wilayah dari tahun ke tahun. '+describeTrend(yearly,'desa') : 'Data temporal tidak tersedia.'},
+      yearly.length ? {table:{title:'Tabel 6.1 — Perkembangan Cakupan per Tahun',
+        head:['Tahun','Benef Unik','Desa','Δ% Desa','Kecamatan','Kabupaten'],
+        body:yearly.map(function(r){return [r.tahun,r.uniq.toLocaleString(),r.desa,
+          r.growth===null?'—':(r.growth>=0?'+':'')+r.growth.toFixed(1)+'%', r.kec, r.kab];})}} : {spacer:0},
+
+      {section:'VII. Kesimpulan'},
+      {text:'Program menjangkau '+Object.keys(desaS).length+' desa di '+Object.keys(kabS).length+' kabupaten dengan total '+uniq.toLocaleString()+' penerima manfaat unik.'},
+      {bullet:'Konsentrasi desa: '+concDesa.toFixed(0)+'/100 — '+(concDesa>50?'perlu perluasan ke desa lain':'sebaran sudah merata')},
+      {bullet:'Konsentrasi kabupaten: '+concKab.toFixed(0)+'/100 — '+(concKab>50?'terpusat pada sedikit kabupaten':'berimbang antar kabupaten')},
+      {bullet:'Desa under-served: '+underServed.length+' dari '+desaMap.length+' desa ('+(desaMap.length?(underServed.length/desaMap.length*100).toFixed(1):0)+'%) — prioritas perluasan'},
+      {bullet:'Rata-rata jangkauan: '+(Object.keys(desaS).length>0?Math.round(uniq/Object.keys(desaS).length):0)+' orang per desa'}
+    ],
+    lampiran:[
+      {table:{title:'Tabel A1 — Rekap Lengkap per Desa (40 Terbesar)',
+        head:['#','Desa','Kecamatan','Kabupaten','Benef Unik','% Total'],
+        body:byDesa.map(function(x,i){var inf=lu[x[0]]||{};return [i+1,x[0],inf.kec||'—',inf.kab||'—',
+          x[1].toLocaleString(),(uniq?(x[1]/uniq*100).toFixed(2):0)+'%'];})}},
+      {table:{title:'Tabel A2 — Desa Under-Served (Hanya 1 Program)',
+        head:['#','Desa','Kecamatan','Kabupaten','Program'],
+        body:underServed.slice(0,40).map(function(x,i){var inf=lu[x.desa]||{};
+          return [i+1,x.desa,inf.kec||'—',inf.kab||'—',x.programs[0]||'—'];})}},
+      {table:{title:'Tabel A3 — Desa dengan Cakupan Terbaik (3+ Program)',
+        head:['#','Desa','Kecamatan','Jumlah Program'],
+        body:wellServed.slice(0,30).map(function(x,i){var inf=lu[x.desa]||{};
+          return [i+1,x.desa,inf.kec||'—',x.n];})}},
+      {chart:{canvasId:'wch-prog', height:55, title:'Grafik A1 — Sebaran per Program'}}
+    ],
+    metodologi: stdMetodologi([
+      'Indeks konsentrasi menggunakan HHI ternormalisasi (0–100). Nilai mendekati 0 berarti sebaran sangat merata, mendekati 100 berarti terpusat pada sedikit wilayah.',
+      'Desa "under-served" adalah desa yang hanya dijangkau satu program dalam periode data.',
+      'Desa dengan data kosong dikelompokkan sebagai "(Tidak Diisi)" dan tetap dihitung dalam total keseluruhan.'
+    ])
+  });
+};
 /* ══════════════════ ANALITIK ══════════════════ */
 function buildAnalitikPage(){ renderAnalitikContent(); }
 
@@ -154,39 +290,218 @@ function renderAnalitikContent(){
 }
 
 /* ── Analitik PDF Export — Narrative ── */
-window.exportAnalitikPDF=function(){
-  var benef=window.rawBenef,pjum=window.rawPjum,B=window.B,P=window.P;
-  var ut=countUniqBenef(benef),tc=pjum.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-  var gL=countUniqByGender(benef,'L'),gP=countUniqByGender(benef,'P');
-  var progBenef=groupCountUniq(benef,function(r){return r[B.proyek];});
-  var progCost=groupSum(pjum,function(r){return r[P.proyek];},function(r){return r[P.jumlah];});
-  var efisi=Object.keys(progBenef).filter(function(p){return progCost[p]&&progBenef[p];}).map(function(p){return{p:p,b:progBenef[p],c:progCost[p],r:progCost[p]/progBenef[p]};}).sort(function(a,b){return a.r-b.r;});
-  var cheapest=efisi[0]||{p:'—',r:0},priciest=efisi[efisi.length-1]||{p:'—',r:0};
-  var desaProgs={};benef.forEach(function(r){if(r[B.desa]&&r[B.proyek]){if(!desaProgs[r[B.desa]])desaProgs[r[B.desa]]={};desaProgs[r[B.desa]][r[B.proyek]]=1;}});
-  var underServed=Object.keys(desaProgs).filter(function(d){return Object.keys(desaProgs[d]).length===1;});
+
+/* ══════════════════════════════════════════════════
+   Analitik PDF — Laporan Cross-Analysis Lengkap
+══════════════════════════════════════════════════ */
+window.exportAnalitikPDF = function() {
+  var benef = window.rawBenef, pjum = window.rawPjum;
+  var B = window.B, P = window.P;
+
+  var uniq = countUniqBenef(benef);
+  var cost = pjum.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+  var g = genderBreakdown(benef);
+  var progs = allProgramList(benef, pjum);
+  var perB = dataPeriod(benef, B.tgl), perP = dataPeriod(pjum, P.tgl);
+  var reach = programReach(benef);
+  var desaMap = desaProgramMap(benef);
+  var disab = disabilityBreakdown(benef);
+  var hier = wilayahHierarchy(benef);
+  var anomali = detectAnomalies(benef, pjum);
+  var yearly = calcGrowth(yearlyRecap(benef, pjum), 'uniq');
+
+  /* Efisiensi lengkap */
+  var progBenef = groupCountUniq(benef, function(r){return r[B.proyek];});
+  var progCost  = groupSum(pjum, function(r){return r[P.proyek];}, function(r){return r[P.jumlah];});
+  var reachMap = {}; reach.forEach(function(r){ reachMap[r.program]=r; });
+  var efisi = progs.map(function(p){
+    var b = progBenef[p]||0, c = progCost[p]||0, rc = reachMap[p]||{};
+    return {p:p, b:b, c:c, r: b>0&&c>0 ? c/b : null,
+      desa:rc.desa||0, kab:rc.kab||0, durasi:rc.durasi||0};
+  }).filter(function(x){return x.r!==null;}).sort(function(a,b){return a.r-b.r;});
+
+  var noCost = progs.filter(function(p){ return (progBenef[p]||0)>0 && !(progCost[p]>0); });
+  var noBenef = progs.filter(function(p){ return (progCost[p]||0)>0 && !(progBenef[p]>0); });
+
+  var cheapest = efisi[0]||{p:'—',r:0,b:0,c:0};
+  var priciest = efisi[efisi.length-1]||{p:'—',r:0,b:0,c:0};
+  var medEfisi = efisi.length ? efisi[Math.floor(efisi.length/2)].r : 0;
+
+  /* Gender imbalance per program */
+  var genderProg = progs.map(function(p){
+    var rows = benef.filter(function(r){return r[B.proyek]===p;});
+    var gg = genderBreakdown(rows);
+    return {p:p, L:gg.L, P:gg.P, total:gg.total, rasio:gg.rasio,
+      imbalance: gg.total>0 ? Math.abs(gg.P/gg.total - 0.5)*2 : 0};
+  }).filter(function(x){return x.total>0;}).sort(function(a,b){return b.imbalance-a.imbalance;});
+
+  /* Staf: benef vs biaya */
+  var stafBenef = groupCountUniq(benef, function(r){return r[B.staf];});
+  var stafCost  = groupSum(pjum, function(r){return r[P.staf];}, function(r){return r[P.jumlah];});
+  var allStaf = {};
+  Object.keys(stafBenef).forEach(function(s){allStaf[normStafKey(s)]=s;});
+  Object.keys(stafCost).forEach(function(s){if(!allStaf[normStafKey(s)])allStaf[normStafKey(s)]=s;});
+  var stafRows = Object.values(allStaf).map(function(s){
+    var b = stafBenef[s]||0, c = stafCost[s]||0;
+    return {s:s, b:b, c:c, r: b>0&&c>0 ? c/b : null};
+  }).sort(function(a,b){return b.b-a.b;});
+
+  /* Cross-tab kategori x kabupaten */
+  var katSet={},kabSet={};
+  benef.forEach(function(r){if(r[B.kategori])katSet[r[B.kategori]]=1;if(r[B.kab])kabSet[r[B.kab]]=1;});
+  var katList=Object.keys(katSet).sort(), kabList=Object.keys(kabSet).sort();
+  var ct={};
+  benef.forEach(function(r){
+    var k=r[B.kategori], kb=r[B.kab]; if(!k||!kb)return;
+    var key=k+'||'+kb; if(!ct[key])ct[key]={};
+    ct[key][benefKey(r)]=1;
+  });
+  var ctRows = katList.map(function(kat){
+    var row=[kat], tot=0;
+    kabList.forEach(function(kb){
+      var c = ct[kat+'||'+kb] ? Object.keys(ct[kat+'||'+kb]).length : 0;
+      row.push(c>0?c.toLocaleString():'–'); tot+=c;
+    });
+    row.push(tot.toLocaleString());
+    return row;
+  });
+
+  var underServed = desaMap.filter(function(x){return x.n===1;});
+  var wellServed = desaMap.filter(function(x){return x.n>=3;});
+  var concDesa = concentrationIndex(topN(groupCountUniq(benef,function(r){return r[B.desa];}),100).map(function(x){return x[1];}));
+  var avgPart = avgParticipation(benef);
+  var rasioSpread = cheapest.r>0 && priciest.r>0 ? priciest.r/cheapest.r : 0;
 
   buildPDF({
-    title:'Laporan Analitik Mendalam',subtitle:'Yayasan Ayo Indonesia — Cross-Analysis',filterText:'Semua Data',filename:'Analitik_Report.pdf',
-    narrative:[
-      {heading:'Ringkasan Analitik'},
-      {text:'Laporan ini menyajikan analisis silang (cross-analysis) antara data penerima manfaat dan penggunaan dana PJUM. Secara keseluruhan, '+ut.toLocaleString()+' penerima manfaat unik dilayani oleh '+Object.keys(progBenef).length+' program dengan total biaya '+fmt(tc)+'. Rata-rata biaya per penerima manfaat adalah '+fmtShort(ut>0?tc/ut:0)+'.'},
-      {heading:'Efisiensi Program'},
-      {text:'Program paling efisien dari segi biaya per orang adalah "'+cheapest.p+'" dengan '+fmtShort(cheapest.r)+' per beneficiary unik, sedangkan yang paling mahal adalah "'+priciest.p+'" dengan '+fmtShort(priciest.r)+' per orang. Selisih efisiensi antar program mencapai '+(priciest.r>0&&cheapest.r>0?(priciest.r/cheapest.r).toFixed(1):'—')+'x lipat.'},
-      {bullet:'Program termurah: '+cheapest.p+' — '+fmtShort(cheapest.r)+'/orang ('+cheapest.b+' benef unik, biaya '+fmtShort(cheapest.c)+')'},
-      {bullet:'Program termahal: '+priciest.p+' — '+fmtShort(priciest.r)+'/orang'},
-      {heading:'Kesetaraan Gender'},
-      {text:'Secara keseluruhan, rasio perempuan terhadap laki-laki adalah '+(gL>0?(gP/gL).toFixed(2):'—')+' ('+gP.toLocaleString()+' perempuan, '+gL.toLocaleString()+' laki-laki). Rasio ini menunjukkan '+(gL>0&&gP/gL>0.8&&gP/gL<1.2?'keseimbangan gender yang cukup baik':'ketidakseimbangan gender yang perlu diperhatikan')+'.'},
-      {heading:'Cakupan Wilayah'},
-      {text:'Dari '+Object.keys(desaProgs).length+' desa yang terjangkau, sebanyak '+underServed.length+' desa ('+(Object.keys(desaProgs).length?(underServed.length/Object.keys(desaProgs).length*100).toFixed(1):0)+'%) hanya dilayani oleh 1 program. Desa-desa ini dapat menjadi prioritas untuk perluasan cakupan program.'},
-      {heading:'Kualitas Data'},
-      {text:'Dari total '+benef.length.toLocaleString()+' catatan partisipasi, sebanyak '+benef.filter(function(r){return !validTgl(r[B.tgl]);}).length+' record tidak memiliki tanggal dan '+benef.filter(function(r){return r[B.gender]==='—';}).length+' record tidak memiliki data gender. Perbaikan kelengkapan data akan meningkatkan akurasi analisis.'}
+    title:'Laporan Analitik Mendalam', subtitle:'Yayasan Ayo Indonesia — Cross-Analysis',
+    filterText:'Seluruh Data (Tanpa Filter)', filename:'Laporan_Analitik.pdf',
+    meta:{ periode: perB?fmtPeriod(perB.start)+' – '+fmtPeriod(perB.end):'Tidak tersedia',
+           sumber:'Google Sheets YAI — Beneficiary & PJUM' },
+    body:[
+      {section:'I. Ringkasan Eksekutif'},
+      {text:'Laporan ini menyajikan analisis silang antara data penerima manfaat dan data penggunaan dana. Tujuannya adalah menemukan pola yang tidak terlihat bila kedua data dianalisis secara terpisah, seperti efisiensi biaya per program, ketimpangan gender, dan kesenjangan cakupan wilayah.'},
+      {text:'Secara keseluruhan, '+uniq.toLocaleString()+' penerima manfaat unik dilayani melalui '+progs.length+' program dengan total dana '+fmt(cost)+'. Biaya rata-rata per penerima manfaat adalah '+fmt(uniq>0?cost/uniq:0)+', dengan rentang efisiensi antar program mencapai '+(rasioSpread>0?rasioSpread.toFixed(1)+' kali lipat':'—')+'.'},
+      {kv:[
+        ['Penerima Manfaat Unik', uniq.toLocaleString()+' orang'],
+        ['Total Dana', fmt(cost)],
+        ['Biaya Rata-rata per Orang', uniq>0?fmt(cost/uniq):'—'],
+        ['Biaya Median per Program', medEfisi>0?fmt(medEfisi):'—'],
+        ['Jumlah Program', progs.length.toString()],
+        ['Program dengan Data Lengkap', efisi.length+' program (ada benef & biaya)'],
+        ['Rasio Gender P:L', g.rasio!==null?g.rasio.toFixed(2):'—'],
+        ['Desa Under-Served', underServed.length+' dari '+desaMap.length+' desa'],
+        ['Rata-rata Partisipasi', avgPart.toFixed(1)+' kegiatan/orang']
+      ]},
+
+      {section:'II. Temuan Utama'},
+      {heading:'2.1 Efisiensi Biaya'},
+      {text:'Program paling efisien adalah "'+cheapest.p+'" dengan biaya '+fmt(cheapest.r)+' per penerima manfaat, menjangkau '+cheapest.b.toLocaleString()+' orang dengan dana '+fmtShort(cheapest.c)+'. Sebaliknya, program paling mahal adalah "'+priciest.p+'" dengan '+fmt(priciest.r)+' per orang.'},
+      {callout:'Selisih efisiensi antar program mencapai '+(rasioSpread>0?rasioSpread.toFixed(1)+' kali lipat':'—')+'. Perbedaan sebesar ini wajar bila jenis intervensi berbeda (misalnya pelatihan massal vs pendampingan intensif), namun perlu ditinjau bila jenis programnya serupa.'},
+      {heading:'2.2 Ketimpangan Gender'},
+      {text: genderProg.length ? 'Program dengan ketimpangan gender terbesar adalah "'+genderProg[0].p+'" (L: '+genderProg[0].L.toLocaleString()+', P: '+genderProg[0].P.toLocaleString()+', rasio '+(genderProg[0].rasio!==null?genderProg[0].rasio.toFixed(2):'—')+'). Secara keseluruhan rasio P:L adalah '+(g.rasio!==null?g.rasio.toFixed(2):'—')+'.' : ''},
+      {heading:'2.3 Kesenjangan Cakupan'},
+      {text:'Dari '+desaMap.length+' desa yang terjangkau, '+underServed.length+' desa ('+(desaMap.length?(underServed.length/desaMap.length*100).toFixed(1):0)+'%) hanya dilayani satu program, sementara '+wellServed.length+' desa sudah dilayani tiga program atau lebih. Ketimpangan ini menunjukkan peluang untuk pemerataan intervensi.'},
+
+      {section:'III. Analisis Efisiensi Program'},
+      {text:'Efisiensi dihitung sebagai total biaya PJUM dibagi jumlah penerima manfaat unik per program. Tabel berikut juga menyertakan cakupan wilayah dan durasi program agar perbandingan lebih adil — program dengan cakupan luas dan durasi panjang wajar memiliki biaya lebih besar.'},
+      {table:{title:'Tabel 3.1 — Efisiensi dan Cakupan per Program',
+        head:['#','Program','Benef Unik','Total Biaya','Rp/Benef','Desa','Kab','Durasi'],
+        body:efisi.map(function(e,i){return [i+1,e.p,e.b.toLocaleString(),fmtShort(e.c),
+          fmt(e.r),e.desa,e.kab,e.durasi>0?e.durasi+' bln':'—'];})}},
+      {chart:{canvasId:'ach-efisiensi', height:55, title:'Grafik 3.1 — Efisiensi per Program'}},
+      (noCost.length||noBenef.length) ? {heading:'3.1 Catatan Kelengkapan Data Program'} : {spacer:0},
+      noCost.length ? {text:'Terdapat '+noCost.length+' program yang memiliki data penerima manfaat namun tidak memiliki catatan biaya PJUM: '+noCost.slice(0,8).join(', ')+(noCost.length>8?', dan lainnya':'')+'. Program ini tidak dapat dihitung efisiensinya.'} : {spacer:0},
+      noBenef.length ? {text:'Sebaliknya, '+noBenef.length+' program memiliki catatan biaya namun belum ada data penerima manfaat: '+noBenef.slice(0,8).join(', ')+(noBenef.length>8?', dan lainnya':'')+'.'} : {spacer:0},
+
+      {section:'IV. Analisis Kesetaraan Gender'},
+      {text:'Bagian ini menilai keseimbangan gender di setiap program. Rasio P:L sebesar 1,00 berarti seimbang sempurna. Nilai di bawah 1 menunjukkan dominasi laki-laki, di atas 1 dominasi perempuan.'},
+      {table:{title:'Tabel 4.1 — Komposisi Gender per Program',
+        head:['#','Program','Laki-laki','Perempuan','Total','Rasio P:L','Status'],
+        body:genderProg.map(function(x,i){
+          var st = x.rasio===null?'—' : (x.rasio>=0.85&&x.rasio<=1.18)?'Seimbang' : x.rasio<0.85?'Dominan L':'Dominan P';
+          return [i+1,x.p,x.L.toLocaleString(),x.P.toLocaleString(),x.total.toLocaleString(),
+            x.rasio!==null?x.rasio.toFixed(2):'—',st];
+        })}},
+      {chart:{canvasId:'ach-gender-prog', height:55, title:'Grafik 4.1 — Rasio Gender per Program'}},
+      {text:'Sebanyak '+genderProg.filter(function(x){return x.rasio!==null&&x.rasio>=0.85&&x.rasio<=1.18;}).length+' dari '+genderProg.length+' program berada dalam rentang seimbang. '+(g.konflik>0?'Catatan: '+g.konflik+' orang tercatat dengan gender berbeda pada baris berbeda dan telah direkonsiliasi.':'')},
+
+      {section:'V. Cross-Tab: Kategori × Wilayah'},
+      {text:'Tabel silang berikut menunjukkan sebaran kategori penerima manfaat di setiap kabupaten. Ini membantu mengidentifikasi apakah jenis intervensi tertentu hanya terkonsentrasi di wilayah tertentu.'},
+      {table:{title:'Tabel 5.1 — Jumlah Benef Unik: Kategori × Kabupaten',
+        head:['Kategori'].concat(kabList).concat(['Total']),
+        body:ctRows}},
+      {text:'Angka pada tabel adalah jumlah penerima manfaat unik. Tanda "–" berarti tidak ada penerima manfaat pada kombinasi kategori dan wilayah tersebut.'},
+
+      {section:'VI. Analisis Beban Kerja Staf'},
+      {text:'Perbandingan antara jumlah penerima manfaat yang dilayani dengan dana yang dikelola setiap staf. Rasio biaya per penerima manfaat membantu mengidentifikasi perbedaan pola kerja antar staf.'},
+      {table:{title:'Tabel 6.1 — Beban Kerja dan Pengelolaan Dana per Staf',
+        head:['#','Staf','Benef Unik','Dana Dikelola','Rp/Benef'],
+        body:stafRows.slice(0,25).map(function(x,i){return [i+1,x.s,
+          x.b>0?x.b.toLocaleString():'—', x.c>0?fmtShort(x.c):'—',
+          x.r!==null?fmt(x.r):'—'];})}},
+      {chart:{canvasId:'ach-staf-compare', height:55, title:'Grafik 6.1 — Benef vs Biaya per Staf'}},
+
+      {section:'VII. Analisis Cakupan Wilayah'},
+      {text:'Bagian ini menilai pemerataan layanan berdasarkan berapa banyak program yang beroperasi di setiap desa.'},
+      {kv:[
+        ['Total Desa Terjangkau', desaMap.length.toString()],
+        ['Dilayani 1 Program', underServed.length+' desa ('+(desaMap.length?(underServed.length/desaMap.length*100).toFixed(1):0)+'%)'],
+        ['Dilayani 2 Program', desaMap.filter(function(x){return x.n===2;}).length+' desa'],
+        ['Dilayani 3+ Program', wellServed.length+' desa ('+(desaMap.length?(wellServed.length/desaMap.length*100).toFixed(1):0)+'%)'],
+        ['Indeks Konsentrasi', concDesa.toFixed(1)+' / 100']
+      ]},
+      {table:{title:'Tabel 7.1 — Sebaran Kabupaten',
+        head:['#','Kabupaten','Kecamatan','Desa','Benef Unik','% Total'],
+        body:hier.map(function(h,i){return [i+1,h.kab,h.kec,h.desa,h.uniq.toLocaleString(),
+          (uniq?(h.uniq/uniq*100).toFixed(1):0)+'%'];})}},
+
+      {section:'VIII. Perkembangan Tahunan'},
+      {text: yearly.length ? 'Perbandingan jangkauan dan biaya dari tahun ke tahun. '+describeTrend(yearly,'uniq') : 'Data temporal tidak tersedia.'},
+      yearly.length ? {table:{title:'Tabel 8.1 — Rekap Tahunan',
+        head:['Tahun','Benef Unik','Δ%','Biaya PJUM','Transaksi','Rp/Benef','Desa'],
+        body:yearly.map(function(r){return [r.tahun,r.uniq.toLocaleString(),
+          r.growth===null?'—':(r.growth>=0?'+':'')+r.growth.toFixed(1)+'%',
+          fmtShort(r.biaya),r.trx.toLocaleString(),r.rpp>0?fmtShort(r.rpp):'—',r.desa];})}} : {spacer:0},
+      {chart:{canvasId:'ach-trend-prog', height:52, title:'Grafik 8.1 — Tren Benef per Program (Top 4)'}},
+
+      {section:'IX. Kualitas Data'},
+      {text:'Analisis silang sangat bergantung pada kelengkapan kedua sumber data. Anomali berikut perlu diperhatikan karena dapat mempengaruhi akurasi kesimpulan.'},
+      anomali.length ? {table:{title:'Tabel 9.1 — Anomali Terdeteksi',
+        head:['Jenis Anomali','Jumlah','Dampak pada Analisis'],
+        body:anomali.map(function(a){return [a.jenis,a.jml.toLocaleString(),a.ket];})}} : {text:'Tidak ditemukan anomali signifikan.'},
+      (noCost.length||noBenef.length) ? {text:'Selain itu, '+noCost.length+' program tidak memiliki data biaya dan '+noBenef.length+' program tidak memiliki data penerima manfaat, sehingga tidak dapat dianalisis efisiensinya.'} : {spacer:0},
+
+      {section:'X. Kesimpulan dan Rekomendasi'},
+      {text:'Berdasarkan analisis silang di atas, berikut temuan utama dan hal yang dapat ditindaklanjuti:'},
+      {bullet:'Efisiensi: rentang biaya per penerima manfaat berkisar '+fmtShort(cheapest.r)+' hingga '+fmtShort(priciest.r)+'. Tinjau program dengan biaya jauh di atas median ('+fmtShort(medEfisi)+') untuk memastikan kewajaran.'},
+      {bullet:'Gender: '+genderProg.filter(function(x){return x.rasio!==null&&(x.rasio<0.85||x.rasio>1.18);}).length+' program memiliki ketimpangan gender di luar rentang seimbang. Pertimbangkan strategi penjangkauan khusus.'},
+      {bullet:'Pemerataan: '+underServed.length+' desa hanya dilayani satu program. Prioritaskan integrasi layanan di desa-desa ini.'},
+      {bullet:'Kelengkapan data: '+(noCost.length+noBenef.length)+' program memiliki data tidak lengkap. Lengkapi pencatatan agar analisis efisiensi mencakup seluruh program.'},
+      {bullet:'Inklusi: '+(disab.total?(disab.adaDisab/disab.total*100).toFixed(1):0)+'% penerima manfaat adalah penyandang disabilitas dengan '+disab.jenis.length+' ragam berbeda.'}
     ],
     lampiran:[
-      {heading:'Tabel A1: Efisiensi Biaya per Program'},
-      {table:{head:['#','Program','Benef Unik','Total Biaya','Rp/Benef'],body:efisi.map(function(e,i){return [i+1,e.p,e.b.toLocaleString(),fmtShort(e.c),fmtShort(e.r)];})}},
-      {heading:'Grafik B1: Efisiensi per Program'},{chart:{canvasId:'ach-efisiensi',height:55}},
-      {heading:'Grafik B2: Rasio Gender per Program'},{chart:{canvasId:'ach-gender-prog',height:55}},
-      {heading:'Grafik B3: Perbandingan Staf'},{chart:{canvasId:'ach-staf-compare',height:55}}
-    ]
+      {table:{title:'Tabel A1 — Jangkauan dan Durasi Seluruh Program',
+        head:['#','Program','Benef Unik','Desa','Kec','Kab','Mulai','Akhir','Durasi'],
+        body:reach.map(function(r,i){return [i+1,r.program,r.uniq.toLocaleString(),r.desa,r.kec,r.kab,
+          r.mulai?fmtPeriod(r.mulai):'—', r.akhir?fmtPeriod(r.akhir):'—',
+          r.durasi>0?r.durasi+' bln':'—'];})}},
+      {table:{title:'Tabel A2 — Desa Under-Served',
+        head:['#','Desa','Program yang Melayani'],
+        body:underServed.slice(0,40).map(function(x,i){return [i+1,x.desa,x.programs[0]||'—'];})}},
+      {table:{title:'Tabel A3 — Desa dengan Cakupan Terbaik',
+        head:['#','Desa','Jumlah Program','Daftar Program'],
+        body:wellServed.slice(0,25).map(function(x,i){return [i+1,x.desa,x.n,
+          x.programs.slice(0,3).join(', ')+(x.programs.length>3?', ...':'')];})}},
+      {table:{title:'Tabel A4 — Ragam Disabilitas',
+        head:['#','Ragam','Jumlah','% dari Penyandang'],
+        body:disab.jenis.map(function(x,i){return [i+1,x[0],x[1].toLocaleString(),
+          (disab.adaDisab?(x[1]/disab.adaDisab*100).toFixed(1):0)+'%'];})}}
+    ],
+    metodologi: stdMetodologi([
+      'Efisiensi biaya dihitung sebagai total PJUM program dibagi jumlah penerima manfaat unik program tersebut. Program tanpa salah satu data tidak dimasukkan dalam perhitungan efisiensi.',
+      'Perbandingan efisiensi antar program perlu mempertimbangkan jenis intervensi, cakupan wilayah, dan durasi. Program pendampingan intensif secara alami memiliki biaya per orang lebih tinggi daripada program penyuluhan massal.',
+      'Rentang "seimbang" untuk rasio gender ditetapkan pada 0,85–1,18 (setara 46%–54% perempuan).',
+      'Indeks konsentrasi menggunakan HHI ternormalisasi (0–100).'
+    ])
   });
 };
