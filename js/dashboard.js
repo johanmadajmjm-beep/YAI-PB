@@ -159,30 +159,96 @@ function buildAiInsight(benef, pjum) {
     'Pengeluaran PJUM tertinggi pada <strong>' + topBulan + '</strong> senilai <strong>' + fmtShort(topBulanCost[1]) + '</strong>.');
 }
 
+var NOTIF_SNAP_KEY = 'yai_notif_snap_v1';
+
+/* Cari info staf & program dari row pertama yang memakai file tsb */
+function _notifFileInfo(rows, fileIdx, stafIdx, progIdx, fname) {
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i][fileIdx] === fname) {
+      return { staf: rows[i][stafIdx] || '—', prog: rows[i][progIdx] || '—' };
+    }
+  }
+  return { staf: '—', prog: '—' };
+}
+
 function buildNotifications(benef, pjum) {
+  /* Notifikasi selalu berbasis data mentah penuh (bukan hasil filter dashboard),
+     supaya deteksi "data baru" konsisten */
   var B = window.B, P = window.P;
-  var items = [];
-  var noTgl = benef.filter(function(r) { return !validTgl(r[B.tgl]); }).length;
-  if (noTgl > 0) items.push({type:'warn', title:noTgl.toLocaleString()+' record benef tanpa tanggal', desc:'Tidak muncul di grafik trend'});
-  var noDesa = benef.filter(function(r) { return !r[B.desa] || r[B.desa]==='—'; }).length;
-  if (noDesa > 0) items.push({type:'warn', title:noDesa.toLocaleString()+' record benef tanpa desa', desc:'Sebaran wilayah mungkin tidak akurat'});
-  var noGender = benef.filter(function(r) { return r[B.gender]==='—'; }).length;
-  if (noGender > 0) items.push({type:'info', title:noGender.toLocaleString()+' record tanpa gender', desc:'Gender tidak terisi (L/P)'});
-  var pjumNoTgl = pjum.filter(function(r) { return !validTgl(r[P.tgl]); }).length;
-  if (pjumNoTgl > 0) items.push({type:'warn', title:pjumNoTgl.toLocaleString()+' PJUM tanpa tanggal', desc:'Tidak muncul di grafik'});
-  if (items.length === 0) items.push({type:'ok', title:'Semua data terlihat baik', desc:countUniqBenef(benef).toLocaleString()+' benef unik'});
+  var benefAll = window.rawBenef || benef, pjumAll = window.rawPjum || pjum;
+
+  var snap = null;
+  try { snap = JSON.parse(localStorage.getItem(NOTIF_SNAP_KEY) || 'null'); } catch(e) {}
+
+  var curFP = {}, curFB = {};
+  pjumAll.forEach(function(r) { if (r[P.file]) curFP[r[P.file]] = 1; });
+  benefAll.forEach(function(r) { if (r[B.file]) curFB[r[B.file]] = 1; });
+
+  var items = [], newCount = 0;
+
+  if (snap) {
+    var dB = benefAll.length - (snap.b || 0);
+    if (dB > 0) { items.push({type:'ok', title:'+' + dB.toLocaleString() + ' record beneficiary baru', desc:'Masuk sejak kunjungan terakhir'}); newCount++; }
+    var dP = pjumAll.length - (snap.p || 0);
+    if (dP > 0) { items.push({type:'ok', title:'+' + dP.toLocaleString() + ' transaksi PJUM baru', desc:'Masuk sejak kunjungan terakhir'}); newCount++; }
+
+    var oldFP = {}, oldFB = {};
+    (snap.fp || []).forEach(function(f) { oldFP[f] = 1; });
+    (snap.fb || []).forEach(function(f) { oldFB[f] = 1; });
+    var newFP = Object.keys(curFP).filter(function(f) { return !oldFP[f]; });
+    var newFB = Object.keys(curFB).filter(function(f) { return !oldFB[f]; });
+
+    newFP.slice(0, 4).forEach(function(f) {
+      var info = _notifFileInfo(pjumAll, P.file, P.staf, P.proyek, f);
+      items.push({type:'info', title:'File PJUM baru: ' + f, desc:info.staf + ' · ' + info.prog});
+      newCount++;
+    });
+    if (newFP.length > 4) { items.push({type:'info', title:'+' + (newFP.length - 4) + ' file PJUM baru lainnya', desc:'Lihat detail di halaman PJUM'}); newCount++; }
+    newFB.slice(0, 4).forEach(function(f) {
+      var info = _notifFileInfo(benefAll, B.file, B.staf, B.proyek, f);
+      items.push({type:'info', title:'File Benef baru: ' + f, desc:info.staf + ' · ' + info.prog});
+      newCount++;
+    });
+    if (newFB.length > 4) { items.push({type:'info', title:'+' + (newFB.length - 4) + ' file benef baru lainnya', desc:'Lihat detail di halaman Beneficiary'}); newCount++; }
+
+    if (newCount === 0) {
+      items.push({type:'ok', title:'Tidak ada data baru', desc:benefAll.length.toLocaleString() + ' record benef · ' + pjumAll.length.toLocaleString() + ' transaksi PJUM'});
+    }
+  } else {
+    items.push({type:'info', title:'Pemantauan data masuk aktif', desc:'Data baru akan muncul di sini pada kunjungan berikutnya'});
+  }
+
+  /* Kualitas data — info sekunder, satu baris ringkas */
+  var noTgl = benefAll.filter(function(r) { return !validTgl(r[B.tgl]); }).length;
+  var pjumNoTgl = pjumAll.filter(function(r) { return !validTgl(r[P.tgl]); }).length;
+  if (noTgl + pjumNoTgl > 0) {
+    items.push({type:'warn', title:(noTgl + pjumNoTgl).toLocaleString() + ' record tanpa tanggal',
+      desc:'Kualitas data: ' + noTgl.toLocaleString() + ' benef · ' + pjumNoTgl.toLocaleString() + ' PJUM (tidak muncul di grafik trend)'});
+  }
+
+  /* Snapshot pending — disimpan saat panel dibuka (tandai terbaca) */
+  window._notifPending = { b: benefAll.length, p: pjumAll.length, fp: Object.keys(curFP), fb: Object.keys(curFB) };
 
   var badge = document.getElementById('notif-badge');
   var list  = document.getElementById('notif-list');
   if (!badge || !list) return;
-  var wc = items.filter(function(i){return i.type==='warn';}).length;
-  badge.textContent = wc; badge.style.display = wc > 0 ? 'flex' : 'none';
-  var iconMap={warn:'⚠️',info:'ℹ️',ok:'✅'}, classMap={warn:'ni-warn',info:'ni-info',ok:'ni-ok'};
+  badge.textContent = newCount;
+  badge.style.display = newCount > 0 ? 'flex' : 'none';
+  var iconMap={warn:'⚠️',info:'📥',ok:'✅'}, classMap={warn:'ni-warn',info:'ni-info',ok:'ni-ok'};
   list.innerHTML = items.map(function(it) {
     return '<div class="notif-item"><div class="ni-icon '+classMap[it.type]+'">'+iconMap[it.type]+'</div>' +
       '<div class="ni-body"><div class="ni-title">'+it.title+'</div><div>'+it.desc+'</div></div></div>';
   }).join('');
 }
+
+/* Tandai terbaca: simpan snapshot & sembunyikan badge */
+window.markNotifRead = function() {
+  if (window._notifPending) {
+    try { localStorage.setItem(NOTIF_SNAP_KEY, JSON.stringify(window._notifPending)); } catch(e) {}
+  }
+  var badge = document.getElementById('notif-badge');
+  if (badge) badge.style.display = 'none';
+};
 
 /* ── Notif toggle — self-attaching, retries until DOM ready ── */
 (function _attachNotif() {
@@ -191,7 +257,9 @@ function buildNotifications(benef, pjum) {
   if (!btn || !panel) { setTimeout(_attachNotif, 200); return; }
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    var opening = panel.style.display === 'none';
+    panel.style.display = opening ? 'block' : 'none';
+    if (opening && window.markNotifRead) window.markNotifRead();
   });
   document.addEventListener('click', function(e) {
     if (!btn.contains(e.target)) panel.style.display = 'none';

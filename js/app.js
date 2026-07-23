@@ -575,6 +575,7 @@ function renderLaporanContent() {
   pjum.forEach(function(r){if(r[P.proyek]) allProgMap[r[P.proyek].trim().toLowerCase()]=r[P.proyek].trim();});
   benef.forEach(function(r){if(r[B.proyek]) allProgMap[r[B.proyek].trim().toLowerCase()]=r[B.proyek].trim();});
   var allProg = Object.values(allProgMap).sort();
+  window._lapProgList = allProg;
   var tbody = document.getElementById('laporan-prog-body');
   if (tbody) tbody.innerHTML = allProg.map(function(prog, i) {
     var pRows=pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
@@ -582,7 +583,7 @@ function renderLaporanContent() {
     var cost=pRows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     var bTotal=bRows.length, bUniq=countUniqBenef(bRows);
     var rpp=bUniq>0&&cost>0?fmtShort(cost/bUniq):'—';
-    return '<tr><td>'+(i+1)+'</td><td><strong>'+prog+'</strong></td>' +
+    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showProgDetail(window._lapProgList['+i+'])" title="Klik untuk detail"><strong>'+prog+'</strong></span></td>' +
       '<td class="num">'+(cost>0?fmtShort(cost):'—')+'</td><td class="num">'+(pRows.length>0?pRows.length.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(bTotal>0?bTotal.toLocaleString():'—')+'</td><td class="num">'+(bUniq>0?bUniq.toLocaleString():'—')+'</td>' +
       '<td class="num">'+rpp+'</td></tr>';
@@ -593,6 +594,7 @@ function renderLaporanContent() {
   pjum.forEach(function(r){if(r[P.staf]) allStafMap[r[P.staf].trim().toLowerCase()]=r[P.staf].trim();});
   benef.forEach(function(r){if(r[B.staf]) allStafMap[r[B.staf].trim().toLowerCase()]=r[B.staf].trim();});
   var allStaf = Object.values(allStafMap).sort();
+  window._lapStafList = allStaf;
   var stafTbody = document.getElementById('laporan-staf-body');
   if (stafTbody) stafTbody.innerHTML = allStaf.map(function(staf, i) {
     var k=staf.trim().toLowerCase();
@@ -600,7 +602,7 @@ function renderLaporanContent() {
     var bRowsS=benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
     var costS=pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     var bUniqS=countUniqBenef(bRowsS);
-    return '<tr><td>'+(i+1)+'</td><td><strong>'+staf+'</strong></td>' +
+    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showStafDetail(window._lapStafList['+i+'])" title="Klik untuk detail"><strong>'+staf+'</strong></span></td>' +
       '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td><td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(bUniqS>0?bUniqS.toLocaleString():'—')+'</td></tr>';
   }).join('');
@@ -864,3 +866,231 @@ async function boot() {
 }
 
 boot();
+
+/* ══════════════════════════════════════════════════
+   DETAIL MODAL — Laporan (klik nama program / staf)
+   Data mengikuti filter laporan yang sedang aktif
+══════════════════════════════════════════════════ */
+function _dmEsc(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* Periode aktivitas: bulan pertama — bulan terakhir dari gabungan data */
+function _dmPeriode(bRows, pRows) {
+  var B = window.B, P = window.P, months = {};
+  bRows.forEach(function(r) { var t = validTgl(r[B.tgl]); if (t) months[t.slice(0,7)] = 1; });
+  pRows.forEach(function(r) { var t = validTgl(r[P.tgl]); if (t) months[t.slice(0,7)] = 1; });
+  var keys = Object.keys(months).sort();
+  if (!keys.length) return '—';
+  function lbl(k) { var p = k.split('-'); return bulanName(p[1]) + ' ' + p[0]; }
+  return keys.length === 1 ? lbl(keys[0]) : lbl(keys[0]) + ' — ' + lbl(keys[keys.length-1]);
+}
+
+/* Group gabungan benef+pjum by kolom: {name, uniq, rec, cost, trx} */
+function _dmGroupBy(bRows, pRows, bIdx, pIdx) {
+  var map = {};
+  bRows.forEach(function(r) {
+    var name = (r[bIdx] || '').trim(); if (!name) return;
+    var k = name.toLowerCase();
+    if (!map[k]) map[k] = { name: name, set: {}, rec: 0, cost: 0, trx: 0 };
+    map[k].set[benefKey(r)] = 1; map[k].rec++;
+  });
+  pRows.forEach(function(r) {
+    var name = (r[pIdx] || '').trim(); if (!name) return;
+    var k = name.toLowerCase();
+    if (!map[k]) map[k] = { name: name, set: {}, rec: 0, cost: 0, trx: 0 };
+    map[k].cost += parseFloat(r[window.P.jumlah]) || 0; map[k].trx++;
+  });
+  return Object.keys(map).map(function(k) {
+    var o = map[k];
+    return { name: o.name, uniq: Object.keys(o.set).length, rec: o.rec, cost: o.cost, trx: o.trx };
+  }).sort(function(a, b) { return b.uniq - a.uniq || b.cost - a.cost; });
+}
+
+function _dmFilterLabel() {
+  return getFilterSummary([
+    {label:'Program', val:v('lf-proyek')}, {label:'Staf', val:v('lf-staf')},
+    {label:'Tahun', val:v('lf-tahun')}, {label:'Bulan', val:v('lf-bulan') ? bulanName(v('lf-bulan')) : ''}
+  ]);
+}
+
+window._dmCurrent = null;
+
+function _dmOpen(model) {
+  window._dmCurrent = model;
+  setEl('dm-kicker', model.kicker);
+  setEl('dm-title', _dmEsc(model.title));
+  setEl('dm-sub', _dmEsc(model.sub));
+  var html = '<div class="mstat-grid">' + model.stats.map(function(s) {
+    return '<div class="mstat"><div class="ms-lbl">' + s[0] + '</div><div class="ms-val" title="' + _dmEsc(s[1]) + '">' + _dmEsc(s[1]) + '</div></div>';
+  }).join('') + '</div>';
+  model.sections.forEach(function(sec) {
+    html += '<div class="msection-title">' + _dmEsc(sec.title) + '</div>';
+    html += '<div class="mtbl-wrap"><table class="data-table"><thead><tr>' +
+      sec.head.map(function(h) { return '<th' + (h.num ? ' class="num"' : '') + '>' + h.t + '</th>'; }).join('') +
+      '</tr></thead><tbody>';
+    if (!sec.rows.length) {
+      html += '<tr><td colspan="' + sec.head.length + '" style="text-align:center;color:var(--text3);padding:16px">Tidak ada data</td></tr>';
+    } else {
+      html += sec.rows.map(function(row) {
+        return '<tr>' + row.map(function(c, ci) {
+          return '<td' + (sec.head[ci].num ? ' class="num"' : '') + '>' + c + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+    }
+    html += '</tbody></table></div>';
+  });
+  setEl('dm-body', html);
+  var bd = document.getElementById('detail-modal');
+  if (bd) bd.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+window.closeDetailModal = function() {
+  var bd = document.getElementById('detail-modal');
+  if (bd) bd.style.display = 'none';
+  document.body.style.overflow = '';
+};
+
+/* ── Modal: Detail Program ── */
+window.showProgDetail = function(prog) {
+  if (!prog) return;
+  var f = getLaporanFiltered(), B = window.B, P = window.P;
+  var k = prog.trim().toLowerCase();
+  var bRows = f.benef.filter(function(r) { return (r[B.proyek] || '').trim().toLowerCase() === k; });
+  var pRows = f.pjum.filter(function(r) { return (r[P.proyek] || '').trim().toLowerCase() === k; });
+
+  var cost = pRows.reduce(function(s, r) { return s + (parseFloat(r[P.jumlah]) || 0); }, 0);
+  var uniq = countUniqBenef(bRows);
+  var stafList = _dmGroupBy(bRows, pRows, B.staf, P.staf);
+  var kegList  = _dmGroupBy(bRows, pRows, B.kegiatan, P.kegiatan);
+  var desaS = {}, fileS = {};
+  bRows.forEach(function(r) { if (r[B.desa]) desaS[r[B.desa]] = 1; if (r[B.file]) fileS[r[B.file]] = 1; });
+  pRows.forEach(function(r) { if (r[P.file]) fileS[r[P.file]] = 1; });
+  var gL = countUniqByGender(bRows, 'L'), gP = countUniqByGender(bRows, 'P');
+
+  _dmOpen({
+    kicker: 'Detail Program',
+    title: prog,
+    sub: 'Periode: ' + _dmPeriode(bRows, pRows) + '  ·  Filter: ' + _dmFilterLabel(),
+    pdfName: 'Detail_Program_' + prog.replace(/[^a-z0-9]+/gi, '_'),
+    stats: [
+      ['Staf Terlibat (Unik)', stafList.length.toLocaleString()],
+      ['Kegiatan (Unik)', kegList.length.toLocaleString()],
+      ['Benef Unik', uniq.toLocaleString()],
+      ['Total Record Benef', bRows.length.toLocaleString()],
+      ['Total Biaya PJUM', cost > 0 ? fmtShort(cost) : '—'],
+      ['Transaksi PJUM', pRows.length.toLocaleString()],
+      ['Rp / Benef Unik', uniq > 0 && cost > 0 ? fmtShort(cost / uniq) : '—'],
+      ['L / P (Unik)', gL + ' / ' + gP],
+      ['Desa Terjangkau', Object.keys(desaS).length.toLocaleString()],
+      ['File Sumber Data', Object.keys(fileS).length.toLocaleString()]
+    ],
+    sections: [
+      { title: 'Staf Terlibat',
+        head: [{t:'Staf'}, {t:'Benef Unik', num:1}, {t:'Record', num:1}, {t:'Biaya PJUM', num:1}, {t:'Transaksi', num:1}],
+        rows: stafList.map(function(s) {
+          return [_dmEsc(s.name), s.uniq > 0 ? s.uniq.toLocaleString() : '—', s.rec > 0 ? s.rec.toLocaleString() : '—',
+                  s.cost > 0 ? fmtShort(s.cost) : '—', s.trx > 0 ? s.trx.toLocaleString() : '—'];
+        }) },
+      { title: 'Kegiatan',
+        head: [{t:'Kegiatan'}, {t:'Benef Unik', num:1}, {t:'Biaya PJUM', num:1}, {t:'Transaksi', num:1}],
+        rows: kegList.map(function(g) {
+          return [_dmEsc(g.name), g.uniq > 0 ? g.uniq.toLocaleString() : '—',
+                  g.cost > 0 ? fmtShort(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
+        }) }
+    ]
+  });
+};
+
+/* ── Modal: Detail Staf ── */
+window.showStafDetail = function(staf) {
+  if (!staf) return;
+  var f = getLaporanFiltered(), B = window.B, P = window.P;
+  var k = staf.trim().toLowerCase();
+  var bRows = f.benef.filter(function(r) { return (r[B.staf] || '').trim().toLowerCase() === k; });
+  var pRows = f.pjum.filter(function(r) { return (r[P.staf] || '').trim().toLowerCase() === k; });
+
+  var cost = pRows.reduce(function(s, r) { return s + (parseFloat(r[P.jumlah]) || 0); }, 0);
+  var uniq = countUniqBenef(bRows);
+  var progList = _dmGroupBy(bRows, pRows, B.proyek, P.proyek);
+  var kegList  = _dmGroupBy(bRows, pRows, B.kegiatan, P.kegiatan);
+  var desaS = {}, fileS = {};
+  bRows.forEach(function(r) { if (r[B.desa]) desaS[r[B.desa]] = 1; if (r[B.file]) fileS[r[B.file]] = 1; });
+  pRows.forEach(function(r) { if (r[P.file]) fileS[r[P.file]] = 1; });
+  var gL = countUniqByGender(bRows, 'L'), gP = countUniqByGender(bRows, 'P');
+
+  _dmOpen({
+    kicker: 'Detail Staf',
+    title: staf,
+    sub: 'Periode aktif: ' + _dmPeriode(bRows, pRows) + '  ·  Filter: ' + _dmFilterLabel(),
+    pdfName: 'Detail_Staf_' + staf.replace(/[^a-z0-9]+/gi, '_'),
+    stats: [
+      ['Program Diikuti', progList.length.toLocaleString()],
+      ['Benef Unik', uniq.toLocaleString()],
+      ['Total Record Benef', bRows.length.toLocaleString()],
+      ['Total Pengeluaran', cost > 0 ? fmtShort(cost) : '—'],
+      ['Transaksi PJUM', pRows.length.toLocaleString()],
+      ['Kegiatan (Unik)', kegList.length.toLocaleString()],
+      ['Rp / Benef Unik', uniq > 0 && cost > 0 ? fmtShort(cost / uniq) : '—'],
+      ['L / P (Unik)', gL + ' / ' + gP],
+      ['Desa Terjangkau', Object.keys(desaS).length.toLocaleString()],
+      ['File Diupload', Object.keys(fileS).length.toLocaleString()]
+    ],
+    sections: [
+      { title: 'Program yang Diikuti',
+        head: [{t:'Program'}, {t:'Benef Unik', num:1}, {t:'Record', num:1}, {t:'Pengeluaran', num:1}, {t:'Transaksi', num:1}],
+        rows: progList.map(function(p) {
+          return [_dmEsc(p.name), p.uniq > 0 ? p.uniq.toLocaleString() : '—', p.rec > 0 ? p.rec.toLocaleString() : '—',
+                  p.cost > 0 ? fmtShort(p.cost) : '—', p.trx > 0 ? p.trx.toLocaleString() : '—'];
+        }) },
+      { title: 'Kegiatan yang Dikerjakan',
+        head: [{t:'Kegiatan'}, {t:'Benef Unik', num:1}, {t:'Pengeluaran', num:1}, {t:'Transaksi', num:1}],
+        rows: kegList.map(function(g) {
+          return [_dmEsc(g.name), g.uniq > 0 ? g.uniq.toLocaleString() : '—',
+                  g.cost > 0 ? fmtShort(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
+        }) }
+    ]
+  });
+};
+
+/* ── Export PDF isi modal — reuse buildPDF (format konsisten) ── */
+window.exportDetailPDF = function() {
+  var m = window._dmCurrent;
+  if (!m) return;
+  function strip(s) { return String(s).replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'); }
+  var body = [
+    { section: 'I. Ringkasan' },
+    { kv: m.stats.map(function(s) { return [s[0], String(s[1])]; }) }
+  ];
+  var romawi = ['II', 'III', 'IV', 'V'];
+  m.sections.forEach(function(sec, i) {
+    body.push({ section: (romawi[i] || 'X') + '. ' + sec.title });
+    body.push({ table: {
+      head: sec.head.map(function(h) { return h.t; }),
+      body: sec.rows.map(function(r) { return r.map(strip); })
+    } });
+  });
+  buildPDF({
+    title: m.kicker + ': ' + m.title,
+    subtitle: 'YAI Executive Dashboard',
+    filterText: m.sub.replace(/&[a-z]+;/g, ''),
+    filename: (m.pdfName || 'Detail') + '.pdf',
+    meta: { periode: m.sub.split('·')[0].replace(/Periode( aktif)?:/, '').trim() },
+    body: body
+  });
+};
+
+/* ── Self-attach: tombol modal, backdrop, Esc ── */
+(function _attachDetailModal() {
+  var bd = document.getElementById('detail-modal');
+  var btnClose = document.getElementById('dm-close');
+  var btnPdf = document.getElementById('dm-pdf');
+  if (!bd || !btnClose || !btnPdf) { setTimeout(_attachDetailModal, 200); return; }
+  btnClose.addEventListener('click', closeDetailModal);
+  btnPdf.addEventListener('click', function() { exportDetailPDF(); });
+  bd.addEventListener('click', function(e) { if (e.target === bd) closeDetailModal(); });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && bd.style.display !== 'none') closeDetailModal();
+  });
+})();
