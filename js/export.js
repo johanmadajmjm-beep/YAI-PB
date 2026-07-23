@@ -34,6 +34,11 @@ window.getChartImage = function(canvasId) {
    }
 ══════════════════════════════════════════════════ */
 window.buildPDF = function(config) {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('Library jsPDF belum dimuat. Pastikan koneksi internet aktif lalu refresh halaman.');
+    return;
+  }
+  try {
   var jsPDF = window.jspdf.jsPDF;
   var doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   var W = 210, H = 297, M = 15; // A4 dims + margin
@@ -169,12 +174,20 @@ window.buildPDF = function(config) {
 
   addFooter();
   doc.save(config.filename || 'Laporan.pdf');
+  } catch(err) {
+    console.error('PDF export error:', err);
+    alert('Gagal membuat PDF: ' + err.message);
+  }
 };
 
 /* ══════════════════════════════════════════════════
    exportExcel — Export benef + pjum to 2-sheet XLSX
 ══════════════════════════════════════════════════ */
 window.exportExcelLaporan = function(benefRows, pjumRows) {
+  if (!window.XLSX) {
+    alert('Library SheetJS belum dimuat. Pastikan koneksi internet aktif lalu refresh halaman.');
+    return;
+  }
   var B = window.B, P = window.P;
   var wb = XLSX.utils.book_new();
 

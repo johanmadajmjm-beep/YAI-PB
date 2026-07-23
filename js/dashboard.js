@@ -95,8 +95,6 @@ function buildDashboard() {
   buildAiInsight(benef, pjum);
   /* ── Notifikasi ── */
   buildNotifications(benef, pjum);
-  /* ── Attach notif toggle (once) ── */
-  initNotifToggle();
 }
 
 /* ── Reusable: render chart or show "no date" message ── */
@@ -163,12 +161,11 @@ function buildNotifications(benef, pjum) {
   }).join('');
 }
 
-/* ── Notif toggle — safe to call multiple times ── */
-function initNotifToggle() {
-  if (window._notifAttached) return;
+/* ── Notif toggle — self-attaching, retries until DOM ready ── */
+(function _attachNotif() {
   var btn = document.getElementById('btn-notif');
   var panel = document.getElementById('notif-panel');
-  if (!btn || !panel) return;
+  if (!btn || !panel) { setTimeout(_attachNotif, 200); return; }
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -176,8 +173,7 @@ function initNotifToggle() {
   document.addEventListener('click', function(e) {
     if (!btn.contains(e.target)) panel.style.display = 'none';
   });
-  window._notifAttached = true;
-}
+})();
 
 /* ── Dashboard PDF Export ── */
 window.exportDashPDF = function() {
