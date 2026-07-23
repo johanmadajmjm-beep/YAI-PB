@@ -6,7 +6,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><text y=%2218%22 font-size=%2218%22>📊</text></svg>"/>
 <title>YAI — Executive Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/style.css?v=20260723r4"/>
+<link rel="stylesheet" href="css/style.css?v=20260723r5"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
@@ -659,18 +659,36 @@
   </main>
 </div>
 
+<!-- ════════════════════ DETAIL MODAL (Laporan) ════════════════════ -->
+<div id="detail-modal" class="modal-backdrop" style="display:none">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="dm-title">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <div class="mh-kicker" id="dm-kicker">Detail</div>
+        <div class="mh-title" id="dm-title">—</div>
+        <div class="mh-sub" id="dm-sub">—</div>
+      </div>
+      <div class="modal-head-actions">
+        <button class="modal-icon-btn" id="dm-pdf" title="Export PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></button>
+        <button class="modal-icon-btn mib-close" id="dm-close" title="Tutup"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    <div class="modal-body" id="dm-body"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="js/utils.js?v=20260723r4"></script>
-<script src="js/api.js?v=20260723r4"></script>
-<script src="js/charts.js?v=20260723r4"></script>
-<script src="js/report-lib.js?v=20260723r4"></script>
-<script src="js/export.js?v=20260723r4"></script>
-<script src="js/app.js?v=20260723r4"></script>
-<script src="js/dashboard.js?v=20260723r4"></script>
-<script src="js/benef.js?v=20260723r4"></script>
-<script src="js/pjum.js?v=20260723r4"></script>
-<script src="js/pages.js?v=20260723r4"></script>
+<script src="js/utils.js?v=20260723r5"></script>
+<script src="js/api.js?v=20260723r5"></script>
+<script src="js/charts.js?v=20260723r5"></script>
+<script src="js/report-lib.js?v=20260723r5"></script>
+<script src="js/export.js?v=20260723r5"></script>
+<script src="js/app.js?v=20260723r5"></script>
+<script src="js/dashboard.js?v=20260723r5"></script>
+<script src="js/benef.js?v=20260723r5"></script>
+<script src="js/pjum.js?v=20260723r5"></script>
+<script src="js/pages.js?v=20260723r5"></script>
 </body>
 </html>
