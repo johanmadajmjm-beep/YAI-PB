@@ -520,75 +520,62 @@
       <div class="page-header">
         <div class="page-header-left">
           <div class="ph-title">Analitik Mendalam</div>
-          <div class="ph-sub">Analisis deskriptif &amp; cross-analysis antara PJUM dan Beneficiary</div>
+          <div class="ph-sub">Cross-analysis PJUM × Beneficiary — temuan, efisiensi, cakupan</div>
         </div>
         <div class="export-bar">
           <button class="btn-export" title="Export PDF" onclick="exportAnalitikPDF()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></button>
         </div>
       </div>
 
-      <!-- Descriptive Insight Cards -->
+      <!-- 1. Temuan Utama -->
       <div class="insight-grid" id="analitik-insights"></div>
 
-      <!-- 1. Stacked per program bulan — full width -->
+      <!-- 2. Efisiensi Program -->
       <div class="chart-card" style="margin-bottom:14px">
-        <div class="chart-title">Biaya PJUM per Program per Bulan</div>
-        <div class="chart-sub">Perbandingan pengeluaran antar program dari waktu ke waktu</div>
-        <div class="chart-wrap h220"><canvas id="ach-pjum-stacked"></canvas></div>
+        <div class="chart-title">Efisiensi Biaya per Beneficiary (Rp/Orang)</div>
+        <div class="chart-sub">Ranking program — lebih rendah berarti lebih efisien</div>
+        <div class="chart-wrap h260"><canvas id="ach-efisiensi"></canvas></div>
       </div>
 
-      <!-- 2. Gender + Trend kategori -->
+      <!-- 3. Cross-Tab + Gender -->
       <div class="chart-grid g2">
+        <div class="chart-card">
+          <div class="chart-title">Cross-Tab: Kategori × Kabupaten</div>
+          <div class="chart-sub">Jumlah beneficiary unik — warna makin gelap = makin banyak</div>
+          <div id="ach-crosstab" style="margin-top:8px"></div>
+        </div>
         <div class="chart-card">
           <div class="chart-title">Rasio Gender per Program</div>
-          <div class="chart-sub">Distribusi laki-laki dan perempuan tiap program</div>
+          <div class="chart-sub">Perbandingan L / P di setiap program</div>
           <div class="chart-wrap h260"><canvas id="ach-gender-prog"></canvas></div>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">Trend Kategori Benef per Bulan</div>
-          <div class="chart-sub">Top 4 kategori dari waktu ke waktu</div>
-          <div class="chart-wrap h220"><canvas id="ach-kategori-trend"></canvas></div>
-        </div>
       </div>
 
-      <!-- 3. Staf compare + komponen -->
+      <!-- 4. Cakupan Wilayah + Staf -->
       <div class="chart-grid g2">
         <div class="chart-card">
-          <div class="chart-title">Perbandingan Staf: Benef vs Biaya PJUM</div>
-          <div class="chart-sub">Dual axis — benef (oranye) dan biaya PJUM (biru)</div>
-          <div class="chart-wrap h220"><canvas id="ach-staf-compare"></canvas></div>
+          <div class="chart-title">Cakupan Wilayah per Desa</div>
+          <div class="chart-sub">Berapa program yang melayani setiap desa — highlight under-served</div>
+          <div id="ach-coverage" style="margin-top:8px"></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Komponen Biaya PJUM</div>
-          <div class="chart-sub">Proporsi setiap jenis pengeluaran</div>
-          <div style="display:flex;gap:20px;margin-top:8px;align-items:flex-start">
-            <div style="position:relative;width:150px;height:150px;flex-shrink:0">
-              <canvas id="ach-komponen" width="150" height="150"></canvas>
-            </div>
-            <div class="donut-legend" id="ach-komponen-legend" style="flex:1;margin-top:4px"></div>
-          </div>
+          <div class="chart-title">Perbandingan Staf: Beban vs Biaya</div>
+          <div class="chart-sub">Benef unik (oranye) vs biaya PJUM (biru) — dual axis</div>
+          <div class="chart-wrap h260"><canvas id="ach-staf-compare"></canvas></div>
         </div>
       </div>
 
-      <!-- 4. Efisiensi + top kategori -->
-      <div class="chart-grid g2">
-        <div class="chart-card">
-          <div class="chart-title">Efisiensi Biaya per Benef (Rp/Orang)</div>
-          <div class="chart-sub">Per program — lebih rendah lebih efisien</div>
-          <div class="chart-wrap h260"><canvas id="ach-efisiensi"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Top Kategori Beneficiary</div>
-          <div class="chart-sub">Semua data tanpa filter</div>
-          <div class="chart-wrap h260"><canvas id="ach-top-kategori"></canvas></div>
-        </div>
+      <!-- 5. Trend Multi-Program -->
+      <div class="chart-card" style="margin-bottom:14px">
+        <div class="chart-title">Trend Beneficiary per Program (Top 4)</div>
+        <div class="chart-sub">Jumlah penerima manfaat unik per bulan untuk 4 program terbesar</div>
+        <div class="chart-wrap h220"><canvas id="ach-trend-prog"></canvas></div>
       </div>
 
-      <!-- 5. Benef per kabupaten full width -->
-      <div class="chart-card">
-        <div class="chart-title">Sebaran Benef per Kabupaten (semua program)</div>
-        <div class="chart-sub">Seluruh data beneficiary dikelompokkan per kabupaten</div>
-        <div class="chart-wrap h260"><canvas id="ach-kab"></canvas></div>
+      <!-- 6. Kualitas Data -->
+      <div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Kualitas Data</div>
+        <div class="insight-grid" id="ach-dataquality"></div>
       </div>
     </div>
 
