@@ -149,7 +149,8 @@ body {
   display: flex; align-items: center;
   padding: 0 20px; gap: 10px;
   z-index: 100;
-  overflow: hidden;
+  /* v4 fix: overflow visible agar panel notifikasi tidak terpotong */
+  overflow: visible;
   min-width: 0;
 }
 .topbar-title { font-size: 15.5px; font-weight: 800; color: var(--text); white-space: nowrap; letter-spacing: -.2px; }
@@ -597,4 +598,65 @@ body {
 }
 @media (max-width: 600px) {
   .notif-panel { width: 280px; right: -60px; }
+}
+
+/* ══════════════════════════════════════════════════
+   v4.1 — Link tabel klik-able + Detail Modal (Laporan)
+══════════════════════════════════════════════════ */
+.tbl-link { cursor: pointer; color: var(--text); border-bottom: 1px dashed var(--orange-mid); transition: color .15s, border-color .15s; }
+.tbl-link:hover { color: var(--orange-dk); border-bottom-color: var(--orange); }
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(18,23,43,.55);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: dmFade .18s ease both;
+}
+@keyframes dmFade { from { opacity: 0; } to { opacity: 1; } }
+.modal-box {
+  background: var(--card); border-radius: 16px;
+  width: 100%; max-width: 760px; max-height: 88vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 24px 64px rgba(10,14,30,.35), 0 6px 18px rgba(10,14,30,.18);
+  animation: dmUp .22s cubic-bezier(.22,.9,.35,1) both;
+}
+@keyframes dmUp { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+.modal-head {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 15px 18px 13px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(150deg, #FFF9F3, #FFFFFF 70%);
+}
+.modal-head-left { flex: 1; min-width: 0; }
+.mh-kicker { font-size: 9px; font-weight: 700; color: var(--orange-dk); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.mh-title  { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -.2px; line-height: 1.25; overflow-wrap: anywhere; }
+.mh-sub    { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.modal-head-actions { display: flex; gap: 7px; flex-shrink: 0; }
+.modal-icon-btn {
+  width: 32px; height: 32px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--card);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); transition: all .18s; padding: 0;
+}
+.modal-icon-btn:hover { border-color: var(--orange-mid); color: var(--orange); background: var(--orange-lt); }
+.modal-icon-btn:active { transform: scale(.94); }
+.modal-icon-btn.mib-close:hover { border-color: rgba(239,68,68,.4); color: var(--red); background: var(--red-lt); }
+.modal-body { padding: 15px 18px 18px; overflow-y: auto; }
+
+.mstat-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-bottom: 4px; }
+.mstat { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; min-width: 0; }
+.mstat .ms-lbl { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mstat .ms-val { font-size: 14.5px; font-weight: 800; color: var(--text); letter-spacing: -.2px; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.msection-title { font-size: 12px; font-weight: 700; color: var(--text); margin: 14px 0 8px; display: flex; align-items: center; gap: 7px; }
+.msection-title::before { content: ""; width: 3px; height: 13px; border-radius: 2px; background: linear-gradient(180deg, #FB8B3C, var(--orange-dk)); }
+.mtbl-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: auto; max-height: 230px; }
+.mtbl-wrap .data-table td { white-space: normal; }
+
+@media (max-width: 600px) {
+  .modal-backdrop { padding: 10px; }
+  .mstat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .modal-box { max-height: 92vh; }
 }
