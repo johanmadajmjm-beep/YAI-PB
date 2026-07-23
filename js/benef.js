@@ -371,7 +371,7 @@ window.exportBenefPDF = function() {
   var byKeg = topN(groupCountUniq(d,function(r){return r[B.kegiatan];}),15);
   var byBenefit = topN(groupCountUniq(d,function(r){return r[B.benefit];}),15);
   var byStaf = topN(groupCountUniq(d,function(r){return r[B.staf];}),15);
-  var byInstansi = uniqGroupField(d, B.lembaga);
+  var byInstansi = uniqGroupField(d, B.instansi);
   var byJabatan = uniqGroupField(d, B.jabatan);
   var peakB = peakMonths(d, B.tgl, 'uniq');
 
@@ -389,7 +389,7 @@ window.exportBenefPDF = function() {
     {idx:B.nama,label:'Nama'},{idx:B.gender,label:'Jenis Kelamin'},{idx:B.katUsia,label:'Kategori Usia'},
     {idx:B.kategori,label:'Kategori'},{idx:B.disab,label:'Disabilitas'},{idx:B.desa,label:'Desa'},
     {idx:B.kec,label:'Kecamatan'},{idx:B.kab,label:'Kabupaten'},{idx:B.proyek,label:'Program'},
-    {idx:B.kegiatan,label:'Kegiatan'},{idx:B.benefit,label:'Benefit'},{idx:B.lembaga,label:"Instansi/Lembaga"},
+    {idx:B.kegiatan,label:'Kegiatan'},{idx:B.benefit,label:'Benefit'},{idx:B.instansi,label:"Instansi/Lembaga"},
     {idx:B.jabatan,label:'Jabatan'},{idx:B.staf,label:'Staf'},{idx:B.tgl,label:'Tanggal',isDate:true}
   ]);
 

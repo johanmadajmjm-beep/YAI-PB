@@ -11,9 +11,10 @@ window.P = { tgl:0, staf:1, proyek:2, kode:3, kegiatan:4, item:5, jumlah:6, file
 window.B = {
   nama:0, gender:1, kategori:2, usia:3, desa:4, kec:5,
   kegiatan:6, staf:7, tgl:8, proyek:9, kab:10,
-  instansi:11,  /* PERINGATAN v4.6: isi aktual kolom 11 BUKAN instansi (tampak berisi kabupaten).
-                   Untuk instansi/lembaga gunakan B.lembaga (20). Jangan tampilkan field ini
-                   sebelum diverifikasi via debugMapping(). */
+  instansi:11,  /* v4.7 TERVERIFIKASI: kolom 11 = "Instansi/Lembaga" (benar).
+                   Data kabupaten yang dulu tampak di sini berasal dari fallback
+                   ||g('kab') di GAS getRawRows — sudah dicabut (Code_Uploader.gs PATCH v2).
+                   Catatan: B.lembaga (20) = kolom "Lembaga Mitra", bukan instansi. */
   file:12, disab:13, noHp:14, katUsia:15, paroki:16,
   jabatan:17, benefit:18, kode:19, lembaga:20, stafPengupload:21,
   lainnya:22, jikaBenda:23
@@ -296,5 +297,5 @@ window.debugMapping = function() {
   console.table(Object.keys(window.P).map(function(k) {
     return { field: k, index: window.P[k], contoh: sample(window.rawPjum, window.P[k]) };
   }));
-  console.log('Cocokkan setiap baris "contoh" dengan header kolom di GSheet. Fokus verifikasi: paroki (16), jabatan (17), lembaga (20), instansi (11).');
+  console.log('Cocokkan setiap baris "contoh" dengan header kolom di GSheet. Terverifikasi 23/07/2026: paroki (16) OK, instansi (11) OK setelah PATCH v2 GAS. lembaga (20) = Lembaga Mitra.');
 };
