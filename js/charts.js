@@ -10,15 +10,19 @@ window.PALETTE = [
 ];
 
 var BASE_TOOLTIP = {
-  backgroundColor: '#1A1F36',
+  backgroundColor: '#1C2237',
   titleColor: '#fff',
-  bodyColor: '#8A96B8',
-  borderColor: '#E8ECF4',
-  borderWidth: 1
+  bodyColor: '#C9CEDF',
+  borderColor: 'rgba(255,255,255,.08)',
+  borderWidth: 1,
+  cornerRadius: 9,
+  padding: 10,
+  titleFont: { family: 'Inter', size: 12, weight: '700' },
+  bodyFont: { family: 'Inter', size: 11 }
 };
 
-var BASE_SCALE_X = { ticks: { color: '#8A96B8', font: { size: 11 } }, grid: { color: '#F0F2F8' } };
-var BASE_SCALE_Y = { ticks: { color: '#8A96B8', font: { size: 11 } }, grid: { color: '#F0F2F8' } };
+var BASE_SCALE_X = { ticks: { color: '#918C81', font: { size: 11, family: 'Inter' } }, grid: { color: '#F1EEE7' }, border: { color: '#EAE5DB' } };
+var BASE_SCALE_Y = { ticks: { color: '#918C81', font: { size: 11, family: 'Inter' } }, grid: { color: '#F1EEE7' }, border: { color: '#EAE5DB' } };
 
 window.mkChart = function(id, type, labels, datasets, extra) {
   extra = extra || {};
@@ -33,7 +37,7 @@ window.mkChart = function(id, type, labels, datasets, extra) {
     plugins: {
       legend: {
         display: !extra.noLegend,
-        labels: { color: '#4A5580', font: { size: 12, family: 'Inter' }, boxWidth: 10, padding: 14 }
+        labels: { color: '#4C5470', font: { size: 12, family: 'Inter' }, boxWidth: 10, boxHeight: 10, borderRadius: 3, useBorderRadius: true, padding: 14 }
       },
       tooltip: Object.assign({}, BASE_TOOLTIP)
     }
@@ -106,11 +110,15 @@ window.mkLine = function(id, labels, data, color, opts) {
     label: opts.label || 'Jumlah',
     data: data,
     borderColor: color || PALETTE[0],
-    backgroundColor: (color || PALETTE[0]) + '18',
+    borderWidth: 2.5,
+    backgroundColor: (color || PALETTE[0]) + '22',
     fill: true,
     tension: .38,
-    pointRadius: 4,
-    pointBackgroundColor: color || PALETTE[0]
+    pointRadius: 3,
+    pointHoverRadius: 5,
+    pointBackgroundColor: '#FFFFFF',
+    pointBorderColor: color || PALETTE[0],
+    pointBorderWidth: 2
   }], opts);
 };
 
@@ -118,8 +126,10 @@ window.mkDonut = function(id, labels, data, colors) {
   return mkChart(id, 'doughnut', labels, [{
     data: data,
     backgroundColor: colors || PALETTE,
-    borderWidth: 0,
-    hoverOffset: 4
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    borderRadius: 3,
+    hoverOffset: 5
   }], { cutout: '65%', noLegend: true });
 };
 
