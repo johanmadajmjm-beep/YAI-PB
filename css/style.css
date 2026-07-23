@@ -91,15 +91,16 @@ body {
   min-height: var(--topbar-h);
 }
 .sidebar-logo-icon {
-  width: 32px; height: 32px; border-radius: 9px;
+  width: 34px; height: 34px; border-radius: 10px;
   background: linear-gradient(140deg, #FB8B3C, var(--orange) 55%, var(--orange-dk));
-  box-shadow: 0 3px 10px rgba(249,115,22,.4);
+  box-shadow: 0 3px 10px rgba(249,115,22,.4), inset 0 1px 0 rgba(255,255,255,.25);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.sidebar-logo-icon svg { width: 17px; height: 17px; flex-shrink: 0; }
-.sidebar-logo-text .org  { font-size: 8.5px; font-weight: 700; color: var(--sb-muted); text-transform: uppercase; letter-spacing: .8px; }
-.sidebar-logo-text .name { font-size: 12.5px; font-weight: 800; color: #FFFFFF; letter-spacing: .2px; }
+.sidebar-logo-icon svg { width: 19px; height: 19px; flex-shrink: 0; }
+.sidebar-logo-text { min-width: 0; }
+.sidebar-logo-text .org  { font-size: 9.5px; font-weight: 500; color: var(--sb-muted); letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.sidebar-logo-text .name { font-size: 13.5px; font-weight: 800; color: #FFFFFF; letter-spacing: -.2px; }
 
 .sidebar-nav { flex: 1; padding: 10px 10px; overflow-y: auto; }
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-color: transparent; }
