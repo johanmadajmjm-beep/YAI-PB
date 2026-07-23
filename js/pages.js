@@ -201,7 +201,11 @@ function renderAnalitikContent(){
   /* ── 1. Temuan Utama (insight cards) ── */
   var progBenef=groupCountUniq(benef,function(r){return r[B.proyek];});
   var progCost=groupSum(pjum,function(r){return r[P.proyek];},function(r){return r[P.jumlah];});
-  var efisi=Object.keys(progBenef).filter(function(p){return progCost[p]&&progBenef[p];}).map(function(p){return{p:p,b:progBenef[p],c:progCost[p],r:progCost[p]/progBenef[p]};}).sort(function(a,b){return a.r-b.r;});
+  /* Join case-insensitive — konsisten dgn halaman Laporan (v4.5) */
+  var progCostLC={};
+  Object.keys(progCost).forEach(function(k){var lk=k.trim().toLowerCase();progCostLC[lk]=(progCostLC[lk]||0)+progCost[k];});
+  function costOf(p){return progCostLC[p.trim().toLowerCase()]||0;}
+  var efisi=Object.keys(progBenef).filter(function(p){return costOf(p)&&progBenef[p];}).map(function(p){return{p:p,b:progBenef[p],c:costOf(p),r:costOf(p)/progBenef[p]};}).sort(function(a,b){return a.r-b.r;});
   var cheapest=efisi[0]||{p:'—',r:0}, priciest=efisi[efisi.length-1]||{p:'—',r:0};
 
   /* Gender imbalance per program */
@@ -233,7 +237,7 @@ function renderAnalitikContent(){
   }).join('');
 
   /* ── 1c. Kuadran program: benef unik (x) vs biaya (y) ── */
-  var scData=Object.keys(progBenef).map(function(p){return {x:progBenef[p], y:progCost[p]||0, label:p};});
+  var scData=Object.keys(progBenef).map(function(p){return {x:progBenef[p], y:costOf(p), label:p};});
   var kdCh=mkChart('ach-kuadran','scatter',[],[{label:'Program',data:scData,backgroundColor:'rgba(249,115,22,.75)',borderColor:'#EA6C0A',borderWidth:1,pointRadius:5,pointHoverRadius:7}],
     {noLegend:true,extra:{scales:{
       x:{title:{display:true,text:'Benef Unik',color:'#918C81',font:{size:10}},ticks:{color:'#918C81',font:{size:10}},grid:{color:'#F1EEE7'}},

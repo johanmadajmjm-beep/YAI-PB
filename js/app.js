@@ -134,31 +134,9 @@ window.CANONICAL_PROGRAMS.forEach(function(p) {
 /* Alias: variasi nama → normKey canonical
    Semua variasi yang ada di data GSheet */
 window.PROGRAM_ALIAS = {
-  /* JPM group */
-  'ayo-bersahaja':   'ayo-jpm',
-  'ayo-odgj':        'ayo-jpm',
-  'ayo-svd(odgj)':   'ayo-jpm',
-  /* VCA group */
-  'vca':             'ayo-vca',
-  /* NLR group */
-  'nlr':             'ayo-nlr',
-  'ayo nlr':         'ayo-nlr',
-  /* NLR KUBIK group */
-  'nlr-kubik':       'ayo-nlr(kubik)',
-  /* VA group — variasi penulisan */
-  'ayo-va':          'ayo-va',
-  'ayo-va':          'ayo-va',
-  /* Transfair group */
-  'ayo-transfair':   'ayo-transfair',
-  /* SVD/SDW group */
-  'ayo-svd/sdw':     'ayo-svd/sdw',
-  /* KEHATI group */
-  'ayo-kehati':      'ayo-kehati',
-  /* Lembaga group */
-  'ayo-lembaga':     'ayo-lembaga',
-  /* Schmitz group */
-  'ayo-schmitz(stunting)': 'ayo-schmitz(stunting)',
-  'ayo-sch(stunting)':     'ayo-sch(stunting)',
+  /* DINONAKTIFKAN (v4.5): nama program sudah dibersihkan & konsisten
+     langsung di GSheet, penggabungan alias tidak diperlukan lagi.
+     normKey tetap berfungsi sebagai pencocokan format (spasi/kapital). */
 };
 
 /* normKey: kembalikan canonical normKey setelah alias resolution */
@@ -221,12 +199,7 @@ window.CANONICAL_STAF = [
 
 /* Alias staf: variasi penulisan → canonical lowercase key */
 window.STAF_ALIAS = {
-  'gens':  'gen',
-  'gen':   'gen',
-  'johan': 'johan',
-  'len':   'len',
-  'lEN':   'len',
-  'stef':  'stef',
+  /* DINONAKTIFKAN (v4.5): nama staf sudah konsisten di GSheet. */
 };
 
 /* Map: lowercase canonical → display name */

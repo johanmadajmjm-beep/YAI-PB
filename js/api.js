@@ -71,14 +71,11 @@ function normProgram(val) {
   }).join(' - ');
 }
 
-/* ─── ALIAS STAF: nama berbeda tapi orang sama ─── */
-var STAF_ALIAS_API = {
-  'gens': 'Gen',
-  'gen':  'Gen',
-  'johan': 'Johan',
-  'len':  'Len',
-  'stef': 'Stef',
-};
+/* ─── ALIAS STAF: DINONAKTIFKAN (v4.5) ───
+   Nama staf & program sudah dibersihkan langsung di GSheet oleh admin,
+   sehingga penggabungan nama di sisi dashboard tidak diperlukan lagi.
+   normStaf kini murni Title Case (pengaman format saja). ─── */
+var STAF_ALIAS_API = {};
 
 /* ─── normStaf: Title Case + alias resolution ─── */
 function normStaf(val) {
@@ -93,6 +90,44 @@ function normStaf(val) {
   var key = titled.trim().toLowerCase();
   return STAF_ALIAS_API[key] || titled;
 }
+
+/* ─── parseJumlah: parser angka rupiah yang tahan format (v4.5) ───
+   Menangani: angka murni, "1500000", "1.500.000" (ID), "1,500,000" (EN),
+   "Rp 500.000", "500.000,50". Nilai tak terbaca → 0.
+─── */
+window.parseJumlah = function(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  if (v == null) return 0;
+  var s = String(v).trim();
+  if (!s || !/\d/.test(s)) return 0;
+  s = s.replace(/rp/gi, '').replace(/\s+/g, '').replace(/[^0-9.,-]/g, '');
+  var neg = s.charAt(0) === '-';
+  s = s.replace(/-/g, '');
+  var hasDot = s.indexOf('.') > -1, hasComma = s.indexOf(',') > -1;
+  if (hasDot && hasComma) {
+    /* pemisah paling kanan dianggap desimal */
+    if (s.lastIndexOf(',') > s.lastIndexOf('.')) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (hasComma) {
+    var pc = s.split(',');
+    if (pc.length === 2 && pc[1].length <= 2) s = pc[0] + '.' + pc[1]; /* desimal ID: 1500,50 */
+    else s = s.replace(/,/g, '');                                       /* ribuan EN: 1,500,000 */
+  } else if (hasDot) {
+    var pd = s.split('.');
+    var polaRibuan = pd.every(function(p, i) { return i === 0 ? (p.length >= 1 && p.length <= 3) : p.length === 3; });
+    if (pd.length === 2 && pd[1].length <= 2 && pd[0].length <= 3 && pd[1].length !== 3) {
+      /* 1.5 / 12.75 → desimal */
+    } else if (polaRibuan) {
+      s = s.replace(/\./g, '');   /* 1.500.000 / 500.000 → ribuan ID */
+    } else if (pd.length === 2) {
+      /* 1234.56 → desimal EN, biarkan */
+    } else {
+      s = s.replace(/\./g, '');
+    }
+  }
+  var n = parseFloat(s);
+  return isFinite(n) ? (neg ? -n : n) : 0;
+};
 
 /* ─── fetch ─── */
 async function fetchRawData(force) {
@@ -124,6 +159,7 @@ async function fetchRawData(force) {
     row[window.P.kegiatan] = normText(row[window.P.kegiatan]);
     row[window.P.item]     = sanitizeStr(row[window.P.item]);
     row[window.P.file]     = sanitizeStr(row[window.P.file]);
+    row[window.P.jumlah]   = window.parseJumlah(row[window.P.jumlah]);
     if (row[window.P.tgl] && typeof row[window.P.tgl] === 'object') row[window.P.tgl] = '';
   });
 
@@ -171,8 +207,8 @@ async function fetchRawData(force) {
 window.fmt = function(n) { return 'Rp ' + Math.round(Number(n)||0).toLocaleString('id-ID'); };
 window.fmtShort = function(n) {
   n = Number(n) || 0;
-  if (n >= 1e9) return 'Rp ' + (n/1e9).toFixed(2) + ' M';
-  if (n >= 1e6) return 'Rp ' + (n/1e6).toFixed(1) + ' jt';
+  if (n >= 1e9) return 'Rp ' + (n/1e9).toFixed(2).replace('.', ',') + ' M';
+  if (n >= 1e6) return 'Rp ' + (n/1e6).toFixed(1).replace('.', ',') + ' jt';
   return 'Rp ' + Math.round(n).toLocaleString('id-ID');
 };
 window.bulanName = function(m) {
@@ -222,12 +258,12 @@ window.classifyItem = function(item) {
   var k = (item || '').toLowerCase();
   if (k.indexOf('konsumsi') > -1 || k.indexOf('makan') > -1 || k.indexOf('snack') > -1) return 'Konsumsi';
   if (k.indexOf('narasumber') > -1 || k.indexOf('fasilitator') > -1) return 'Fee Narasumber';
-  if (k.indexOf('transport') > -1 || k.indexOf('perjalanan') > -1 || k.indexOf('ojek') > -1 || k.indexOf('bensin') > -1) return 'Transport';
-  if (k.indexOf('kendaraan') > -1 || k.indexOf('sewa') > -1 || k.indexOf('bbm') > -1) return 'Kendaraan/BBM';
+  if (k.indexOf('transport') > -1 || k.indexOf('perjalanan') > -1 || k.indexOf('ojek') > -1 || k.indexOf('bensin') > -1 || k.indexOf('bbm') > -1 || k.indexOf('kendaraan') > -1) return 'Transport';
+  if (k.indexOf('sewa') > -1) return 'Sewa Alat/Tempat';
   if (k.indexOf('atk') > -1 || k.indexOf('alat tulis') > -1 || k.indexOf('kertas') > -1) return 'ATK';
   if (k.indexOf('gaji') > -1 || k.indexOf('honor') > -1 || k.indexOf('insentif') > -1) return 'Gaji/Honor';
-  if (k.indexOf('akomodasi') > -1 || k.indexOf('hotel') > -1) return 'Akomodasi';
-  if (k.indexOf('dokumentasi') > -1 || k.indexOf('foto') > -1 || k.indexOf('cetak') > -1 || k.indexOf('banner') > -1) return 'Dok/Cetak';
+  if (k.indexOf('akomodasi') > -1 || k.indexOf('hotel') > -1 || k.indexOf('penginapan') > -1) return 'Akomodasi';
+  if (k.indexOf('dokumentasi') > -1 || k.indexOf('foto') > -1 || k.indexOf('cetak') > -1 || k.indexOf('banner') > -1 || k.indexOf('spanduk') > -1) return 'Dok/Cetak';
   if (k.indexOf('komunikasi') > -1 || k.indexOf('pulsa') > -1 || k.indexOf('internet') > -1) return 'Komunikasi';
   return 'Lainnya';
 };

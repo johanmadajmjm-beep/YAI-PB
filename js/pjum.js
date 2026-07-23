@@ -200,7 +200,7 @@ function renderPjumCharts() {
   var byK=topN(groupSum(d,function(r){return r[P.kode];},function(r){return r[P.jumlah];}),10);
   mkBarH('pch-kode',byK.map(function(x){return x[0];}),byK.map(function(x){return x[1];}), '#8B5CF6',{label:'Biaya',yFmt:fmtShort});
 
-  var byKeg=topN(groupSum(d,function(r){return r[P.kegiatan];},function(r){return r[P.jumlah];}),8);
+  var byKeg=topN(groupSum(d,function(r){return r[P.kegiatan]||'(Tanpa Kegiatan)';},function(r){return r[P.jumlah];}),8);
   mkBarH('pch-kegiatan',byKeg.map(function(x){return x[0];}),byKeg.map(function(x){return x[1];}), '#14B8A6',{label:'Biaya',yFmt:fmtShort});
 
   var qs=document.getElementById('pjum-quick-stats');
@@ -208,7 +208,7 @@ function renderPjumCharts() {
     var tot=d.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
     var items=[
       ['Rata-rata per Transaksi', d.length?fmtShort(tot/d.length):'—'],
-      ['Transaksi Terbesar', d.length?fmtShort(Math.max.apply(null,d.map(function(r){return parseFloat(r[P.jumlah])||0;}))):'—'],
+      ['Transaksi Terbesar', d.length?fmtShort(d.reduce(function(m,r){var x=parseFloat(r[P.jumlah])||0;return x>m?x:m;},0)):'—'],
       ['Program Terbanyak Biaya', byP[0]?byP[0][0]:'—'],
       ['Staf Terbanyak Biaya',    byS[0]?byS[0][0]:'—'],
     ];
