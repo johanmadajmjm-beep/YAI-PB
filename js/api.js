@@ -10,7 +10,10 @@ var CACHE_TTL_MS  = 10 * 60 * 1000;
 window.P = { tgl:0, staf:1, proyek:2, kode:3, kegiatan:4, item:5, jumlah:6, file:7 };
 window.B = {
   nama:0, gender:1, kategori:2, usia:3, desa:4, kec:5,
-  kegiatan:6, staf:7, tgl:8, proyek:9, kab:10, instansi:11,
+  kegiatan:6, staf:7, tgl:8, proyek:9, kab:10,
+  instansi:11,  /* PERINGATAN v4.6: isi aktual kolom 11 BUKAN instansi (tampak berisi kabupaten).
+                   Untuk instansi/lembaga gunakan B.lembaga (20). Jangan tampilkan field ini
+                   sebelum diverifikasi via debugMapping(). */
   file:12, disab:13, noHp:14, katUsia:15, paroki:16,
   jabatan:17, benefit:18, kode:19, lembaga:20, stafPengupload:21,
   lainnya:22, jikaBenda:23
@@ -182,6 +185,7 @@ async function fetchRawData(force) {
     row[window.B.staf]     = normStaf(row[window.B.staf]);
     row[window.B.kode]     = sanitizeStr(row[window.B.kode]);
     row[window.B.instansi] = normText(row[window.B.instansi]);
+    row[window.B.lembaga]  = normText(row[window.B.lembaga]);
     row[window.B.paroki]   = normText(row[window.B.paroki]);
     row[window.B.nama]     = normStaf(row[window.B.nama]);
     if (row[window.B.tgl] && typeof row[window.B.tgl] === 'object') row[window.B.tgl] = '';
@@ -266,4 +270,31 @@ window.classifyItem = function(item) {
   if (k.indexOf('dokumentasi') > -1 || k.indexOf('foto') > -1 || k.indexOf('cetak') > -1 || k.indexOf('banner') > -1 || k.indexOf('spanduk') > -1) return 'Dok/Cetak';
   if (k.indexOf('komunikasi') > -1 || k.indexOf('pulsa') > -1 || k.indexOf('internet') > -1) return 'Komunikasi';
   return 'Lainnya';
+};
+
+
+/* ═══════════════════════════════════════════════
+   debugMapping() — verifikasi mapping kolom vs isi sheet (v4.6)
+   Cara pakai: buka dashboard → F12 → Console → ketik: debugMapping()
+   Cocokkan kolom "contoh" dengan header GSheet. Jika ada label yang
+   tidak sesuai isinya, index di window.B / window.P perlu dikoreksi.
+═══════════════════════════════════════════════ */
+window.debugMapping = function() {
+  function sample(rows, idx) {
+    var out = [];
+    for (var i = 0; i < rows.length && out.length < 3; i++) {
+      var v = rows[i][idx];
+      if (v !== undefined && v !== null && String(v).trim() !== '') out.push(String(v).slice(0, 40));
+    }
+    return out.join(' | ') || '(kosong di semua baris)';
+  }
+  console.log('%c=== MAPPING BENEF (window.B) — ' + window.rawBenef.length + ' baris ===', 'font-weight:bold;color:#F97316');
+  console.table(Object.keys(window.B).map(function(k) {
+    return { field: k, index: window.B[k], contoh: sample(window.rawBenef, window.B[k]) };
+  }));
+  console.log('%c=== MAPPING PJUM (window.P) — ' + window.rawPjum.length + ' baris ===', 'font-weight:bold;color:#4F8EF7');
+  console.table(Object.keys(window.P).map(function(k) {
+    return { field: k, index: window.P[k], contoh: sample(window.rawPjum, window.P[k]) };
+  }));
+  console.log('Cocokkan setiap baris "contoh" dengan header kolom di GSheet. Fokus verifikasi: paroki (16), jabatan (17), lembaga (20), instansi (11).');
 };
