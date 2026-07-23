@@ -1,6 +1,29 @@
 /* ═══════════════════════════════════════════════
-   dashboard.js — Executive Dashboard page
+   dashboard.js — Executive Dashboard
+   BUILD: 2026-07-23-r3
 ═══════════════════════════════════════════════ */
+console.log('[YAI] dashboard.js BUILD 2026-07-23-r3 dimuat');
+
+/* ── Render helper: donut legend ── */
+function renderDonutLegend(id, entries, total) {
+  var el = document.getElementById(id); if (!el) return;
+  el.innerHTML = entries.map(function(x, i) {
+    return '<div class="dl-item"><div class="dl-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></div>' +
+      '<div class="dl-name">'+x[0]+'</div><div class="dl-pct">'+(total?(x[1]/total*100).toFixed(1):0)+'%</div></div>';
+  }).join('');
+}
+window.renderDonutLegend = renderDonutLegend;
+
+/* ── Render helper: ranked list ── */
+function renderRankList(id, entries, max, valFmt, showBar) {
+  var el = document.getElementById(id); if (!el) return;
+  el.innerHTML = entries.map(function(x, i) {
+    var bar = showBar ? '<div class="rank-bar"><div class="rank-bar-fill" style="width:'+(max?x[1]/max*100:0)+'%"></div></div>' : '';
+    return '<div class="rank-item cols3"><div class="rank-num '+(i<3?'top':'')+'">'+(i+1)+'</div>' +
+      '<div><div class="rank-name">'+x[0]+'</div>'+bar+'</div><div class="rank-val">'+valFmt(x[1])+'</div></div>';
+  }).join('');
+}
+window.renderRankList = renderRankList;
 
 function buildDashboard() {
   var filtered = getDashFiltered();
@@ -360,3 +383,4 @@ window.exportDashPDF = function() {
     ])
   });
 };
+
