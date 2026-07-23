@@ -242,6 +242,20 @@ function renderPjumTable() {
            (r[P.kode]    ||'').toLowerCase().indexOf(q)>-1;
   });
   var total=rows.length, start=window.APP.pjum.page*window.APP.PG_SIZE;
+  /* Sort seluruh dataset terfilter (bukan hanya halaman aktif) */
+  var pst=window.SORT['pjum'];
+  if(pst&&pst.col>=0){
+    var PG=[
+      function(r){return r[P.tgl];},function(r){return r[P.staf];},
+      function(r){return r[P.proyek];},function(r){return r[P.kode];},
+      function(r){return r[P.kegiatan];},function(r){return r[P.item];},
+      function(r){return classifyItem(r[P.item]);},
+      function(r){return parseFloat(r[P.jumlah])||0;},
+      function(r){return r[P.file];}
+    ];
+    var pg=PG[pst.col];
+    if(pg) rows=rows.slice().sort(function(a,b){return cmpVals(pg(a),pg(b))*pst.dir;});
+  }
   var slice=rows.slice(start,start+window.APP.PG_SIZE);
   var totalBiaya=rows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
   setEl('pjum-tbl-count',total.toLocaleString()+' baris · '+fmtShort(totalBiaya));
@@ -444,3 +458,6 @@ window.exportPjumPDF = function() {
     ])
   });
 };
+
+/* Sort handler: kembali ke halaman 1 lalu render ulang */
+window._sortHandlers['pjum'] = function(){ window.APP.pjum.page = 0; renderPjumTable(); };

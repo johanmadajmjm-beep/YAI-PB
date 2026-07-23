@@ -575,18 +575,26 @@ function renderLaporanContent() {
   pjum.forEach(function(r){if(r[P.proyek]) allProgMap[r[P.proyek].trim().toLowerCase()]=r[P.proyek].trim();});
   benef.forEach(function(r){if(r[B.proyek]) allProgMap[r[B.proyek].trim().toLowerCase()]=r[B.proyek].trim();});
   var allProg = Object.values(allProgMap).sort();
-  window._lapProgList = allProg;
-  var tbody = document.getElementById('laporan-prog-body');
-  if (tbody) tbody.innerHTML = allProg.map(function(prog, i) {
+  var progRows = allProg.map(function(prog) {
     var pRows=pjum.filter(function(r){return (r[P.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
     var bRows=benef.filter(function(r){return (r[B.proyek]||'').trim().toLowerCase()===prog.trim().toLowerCase();});
     var cost=pRows.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-    var bTotal=bRows.length, bUniq=countUniqBenef(bRows);
-    var rpp=bUniq>0&&cost>0?fmtShort(cost/bUniq):'—';
-    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showProgDetail(window._lapProgList['+i+'])" title="Klik untuk detail"><strong>'+prog+'</strong></span></td>' +
-      '<td class="num">'+(cost>0?fmtShort(cost):'—')+'</td><td class="num">'+(pRows.length>0?pRows.length.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bTotal>0?bTotal.toLocaleString():'—')+'</td><td class="num">'+(bUniq>0?bUniq.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+rpp+'</td></tr>';
+    var bUniq=countUniqBenef(bRows);
+    return {prog:prog, cost:cost, trx:pRows.length, bTotal:bRows.length, bUniq:bUniq, rpp:(bUniq>0&&cost>0)?cost/bUniq:0};
+  });
+  var lps=window.SORT['lap-prog'];
+  if(lps&&lps.col>=1){
+    var LPG=[null,function(o){return o.prog;},function(o){return o.cost;},function(o){return o.trx;},function(o){return o.bTotal;},function(o){return o.bUniq;},function(o){return o.rpp;}];
+    var lpg=LPG[lps.col];
+    if(lpg) progRows.sort(function(a,b){return cmpVals(lpg(a),lpg(b))*lps.dir;});
+  }
+  window._lapProgList = progRows.map(function(o){return o.prog;});
+  var tbody = document.getElementById('laporan-prog-body');
+  if (tbody) tbody.innerHTML = progRows.map(function(o, i) {
+    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showProgDetail(window._lapProgList['+i+'])" title="Klik untuk detail"><strong>'+o.prog+'</strong></span></td>' +
+      '<td class="num">'+(o.cost>0?fmtShort(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(o.bTotal>0?o.bTotal.toLocaleString():'—')+'</td><td class="num">'+(o.bUniq>0?o.bUniq.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(o.rpp>0?fmtShort(o.rpp):'—')+'</td></tr>';
   }).join('');
   setEl('laporan-prog-count', allProg.length+' program');
 
@@ -594,17 +602,25 @@ function renderLaporanContent() {
   pjum.forEach(function(r){if(r[P.staf]) allStafMap[r[P.staf].trim().toLowerCase()]=r[P.staf].trim();});
   benef.forEach(function(r){if(r[B.staf]) allStafMap[r[B.staf].trim().toLowerCase()]=r[B.staf].trim();});
   var allStaf = Object.values(allStafMap).sort();
-  window._lapStafList = allStaf;
-  var stafTbody = document.getElementById('laporan-staf-body');
-  if (stafTbody) stafTbody.innerHTML = allStaf.map(function(staf, i) {
+  var stafRows = allStaf.map(function(staf) {
     var k=staf.trim().toLowerCase();
     var pRowsS=pjum.filter(function(r){return (r[P.staf]||'').trim().toLowerCase()===k;});
     var bRowsS=benef.filter(function(r){return (r[B.staf]||'').trim().toLowerCase()===k;});
     var costS=pRowsS.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
-    var bUniqS=countUniqBenef(bRowsS);
-    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showStafDetail(window._lapStafList['+i+'])" title="Klik untuk detail"><strong>'+staf+'</strong></span></td>' +
-      '<td class="num">'+(costS>0?fmtShort(costS):'—')+'</td><td class="num">'+(pRowsS.length>0?pRowsS.length.toLocaleString():'—')+'</td>' +
-      '<td class="num">'+(bUniqS>0?bUniqS.toLocaleString():'—')+'</td></tr>';
+    return {staf:staf, cost:costS, trx:pRowsS.length, bUniq:countUniqBenef(bRowsS)};
+  });
+  var lss=window.SORT['lap-staf'];
+  if(lss&&lss.col>=1){
+    var LSG=[null,function(o){return o.staf;},function(o){return o.cost;},function(o){return o.trx;},function(o){return o.bUniq;}];
+    var lsg=LSG[lss.col];
+    if(lsg) stafRows.sort(function(a,b){return cmpVals(lsg(a),lsg(b))*lss.dir;});
+  }
+  window._lapStafList = stafRows.map(function(o){return o.staf;});
+  var stafTbody = document.getElementById('laporan-staf-body');
+  if (stafTbody) stafTbody.innerHTML = stafRows.map(function(o, i) {
+    return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showStafDetail(window._lapStafList['+i+'])" title="Klik untuk detail"><strong>'+o.staf+'</strong></span></td>' +
+      '<td class="num">'+(o.cost>0?fmtShort(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(o.bUniq>0?o.bUniq.toLocaleString():'—')+'</td></tr>';
   }).join('');
 }
 
@@ -1094,3 +1110,7 @@ window.exportDetailPDF = function() {
     if (e.key === 'Escape' && bd.style.display !== 'none') closeDetailModal();
   });
 })();
+
+/* Sort handler tabel Laporan */
+window._sortHandlers['lap-prog'] = function(){ renderLaporanContent(); };
+window._sortHandlers['lap-staf'] = function(){ renderLaporanContent(); };

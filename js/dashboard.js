@@ -85,10 +85,10 @@ function buildDashboard() {
   setEl('donut-center-lbl', 'Unik');
   renderDonutLegend('donut-legend', katData, katTotal);
 
-  /* ── Benef per Desa ── */
+  /* ── Benef per Desa (bar chart) ── */
   var desaData = topN(groupCountUniq(benef, function(r) { return r[B.desa]; }), 10);
-  var desaMax  = desaData[0] ? desaData[0][1] : 1;
-  renderRankList('rank-desa', desaData, desaMax, function(v) { return v.toLocaleString(); }, false);
+  mkBarH('dch-desa', desaData.map(function(x) { return x[0]; }), desaData.map(function(x) { return x[1]; }),
+    '#F97316', { label: 'Benef Unik' });
 
   /* ── Pengeluaran PJUM per Bulan ── */
   var pjumByBulan = sortedBulan(groupSum(pjum,

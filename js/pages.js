@@ -19,7 +19,32 @@ var bp=topN(groupCountUniq(d,function(r){return r[B.proyek];}),10);mkBarH('wch-p
 var gM={'L':'Laki-laki','P':'Perempuan','—':'Lainnya'},byG=groupCountUniq(d,function(r){return gM[r[B.gender]]||'Lainnya';}),gK=Object.keys(byG),gC={'Laki-laki':'#4F8EF7','Perempuan':'#EF4444','Lainnya':'#8A96B8'};mkDonut('wch-gender',gK,gK.map(function(k){return byG[k];}),gK.map(function(k){return gC[k]||'#8A96B8';}));
 var wg=document.getElementById('wch-gender-legend');if(wg)wg.innerHTML=gK.map(function(k,i){return '<div class="dl-item"><div class="dl-dot" style="background:'+(gC[k]||PALETTE[i])+'"></div><div class="dl-name">'+k+'</div><div class="dl-pct">'+(ut?(byG[k]/ut*100).toFixed(1):0)+'%</div></div>';}).join('');
 renderWilayahTable();}
-function renderWilayahTable(){var B=window.B,d=window.APP.wilayah.filtered;var bd=topN(groupCountUniq(d,function(r){return r[B.desa];}),200),dt=bd.reduce(function(s,x){return s+x[1];},0)||1,st=window.APP.wilayah.page*20,sl=bd.slice(st,st+20),lu={};d.forEach(function(r){if(r[B.desa]&&!lu[r[B.desa]])lu[r[B.desa]]={kec:r[B.kec],kab:r[B.kab]};});var tb=document.getElementById('wilayah-tbl-body');if(!tb)return;tb.innerHTML=sl.length?sl.map(function(x,i){var inf=lu[x[0]]||{},pc=bd[0]?x[1]/bd[0][1]*100:0;return '<tr><td>'+(st+i+1)+'</td><td><strong>'+x[0]+'</strong></td><td>'+(inf.kec||'—')+'</td><td>'+(inf.kab||'—')+'</td><td class="num">'+x[1].toLocaleString()+'</td><td class="num">'+(x[1]/dt*100).toFixed(1)+'%</td><td><div class="rank-bar" style="width:100px"><div class="rank-bar-fill" style="width:'+pc+'%"></div></div></td></tr>';}).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Tidak ada data</td></tr>';setEl('wilayah-pg-info',(st+1)+'–'+Math.min(st+20,bd.length)+' dari '+bd.length+' desa');var pb=document.getElementById('wilayah-pg-prev'),nb=document.getElementById('wilayah-pg-next');if(pb)pb.disabled=window.APP.wilayah.page===0;if(nb)nb.disabled=st+20>=bd.length;}
+function renderWilayahTable(){
+  var B=window.B,d=window.APP.wilayah.filtered;
+  var bd=topN(groupCountUniq(d,function(r){return r[B.desa];}),200);
+  var dt=bd.reduce(function(s,x){return s+x[1];},0)||1;
+  var maxN=bd[0]?bd[0][1]:1;
+  var lu={};d.forEach(function(r){if(r[B.desa]&&!lu[r[B.desa]])lu[r[B.desa]]={kec:r[B.kec],kab:r[B.kab]};});
+  var list=bd.map(function(x){var inf=lu[x[0]]||{};return {desa:x[0],kec:inf.kec||'\u2014',kab:inf.kab||'\u2014',n:x[1]};});
+  /* Sort seluruh daftar sebelum paginasi */
+  var wst=window.SORT['wilayah'];
+  if(wst&&wst.col>=1){
+    var WG=[null,function(o){return o.desa;},function(o){return o.kec;},function(o){return o.kab;},function(o){return o.n;}];
+    var wg=WG[wst.col];
+    if(wg) list=list.slice().sort(function(a,b){return cmpVals(wg(a),wg(b))*wst.dir;});
+  }
+  var st=window.APP.wilayah.page*20, sl=list.slice(st,st+20);
+  var tb=document.getElementById('wilayah-tbl-body');if(!tb)return;
+  tb.innerHTML=sl.length?sl.map(function(o,i){
+    var pc=o.n/maxN*100;
+    return '<tr><td>'+(st+i+1)+'</td><td><strong>'+o.desa+'</strong></td><td>'+o.kec+'</td><td>'+o.kab+'</td><td class="num">'+o.n.toLocaleString()+'</td><td class="num">'+(o.n/dt*100).toFixed(1)+'%</td><td><div class="rank-bar" style="width:100px"><div class="rank-bar-fill" style="width:'+pc+'%"></div></div></td></tr>';
+  }).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Tidak ada data</td></tr>';
+  setEl('wilayah-pg-info',(st+1)+'\u2013'+Math.min(st+20,list.length)+' dari '+list.length+' desa');
+  var pb=document.getElementById('wilayah-pg-prev'),nb=document.getElementById('wilayah-pg-next');
+  if(pb)pb.disabled=window.APP.wilayah.page===0;
+  if(nb)nb.disabled=st+20>=list.length;
+}
+window._sortHandlers['wilayah']=function(){window.APP.wilayah.page=0;renderWilayahTable();};
 window.changeWilayahPage=function(dir){window.APP.wilayah.page=Math.max(0,window.APP.wilayah.page+dir);renderWilayahTable();};
 
 

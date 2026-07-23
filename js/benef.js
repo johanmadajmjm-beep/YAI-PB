@@ -299,6 +299,21 @@ function renderBenefTable() {
            (r[B.kab]||'').toLowerCase().indexOf(q)>-1;
   });
   var total=rows.length, start=window.APP.benef.page*window.APP.PG_SIZE;
+  /* Sort seluruh dataset terfilter (bukan hanya halaman aktif) */
+  var bst=window.SORT['benef'];
+  if(bst&&bst.col>=0){
+    var BG=[
+      function(r){return r[B.nama];},function(r){return r[B.gender];},
+      function(r){return r[B.katUsia]||r[B.usia];},function(r){return r[B.kategori];},
+      function(r){return r[B.disab];},function(r){return r[B.desa];},
+      function(r){return r[B.kec];},function(r){return r[B.kab];},
+      function(r){return r[B.proyek];},function(r){return r[B.kegiatan];},
+      function(r){return r[B.benefit];},function(r){return r[B.staf];},
+      function(r){return r[B.tgl];},function(r){return r[B.kode];}
+    ];
+    var bg=BG[bst.col];
+    if(bg) rows=rows.slice().sort(function(a,b){return cmpVals(bg(a),bg(b))*bst.dir;});
+  }
   var slice=rows.slice(start,start+window.APP.PG_SIZE);
   setEl('benef-tbl-count',total.toLocaleString()+' baris');
   setEl('benef-pg-info',(start+1).toLocaleString()+'–'+Math.min(start+window.APP.PG_SIZE,total).toLocaleString()+' dari '+total.toLocaleString());
@@ -505,3 +520,6 @@ window.exportBenefPDF = function() {
     ])
   });
 };
+
+/* Sort handler: kembali ke halaman 1 lalu render ulang */
+window._sortHandlers['benef'] = function(){ window.APP.benef.page = 0; renderBenefTable(); };
