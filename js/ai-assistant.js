@@ -170,10 +170,10 @@ function buildDashboardContext() {
 }
 
 /* ══════════════════════════════════════════════════
-   2. GEMINI API CALL — langsung dari browser
+   2. GROQ API CALL — gratis, langsung dari browser
 ══════════════════════════════════════════════════ */
-var GEMINI_API_KEY = 'AQ.Ab8RN6Kq6YjmeSnCl1Vt50UjLULHqsSimFofMF57afvLL906HQ';
-var GEMINI_MODEL   = 'gemini-2.0-flash';
+var GROQ_API_KEY = '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';
+var GROQ_MODEL   = 'llama-3.3-70b-versatile';
 
 async function callGemini(userMessage, chatHistory) {
   var context = buildDashboardContext();
@@ -189,53 +189,37 @@ async function callGemini(userMessage, chatHistory) {
     context
   ].join('\n');
 
-  /* Susun contents: history + pertanyaan baru */
-  var contents = [];
+  var messages = [{ role: 'system', content: systemText }];
   chatHistory.slice(-10).forEach(function(msg) {
-    contents.push({
-      role:  msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: String(msg.text || '') }]
+    messages.push({
+      role:    msg.role === 'user' ? 'user' : 'assistant',
+      content: String(msg.text || '')
     });
   });
-  contents.push({ role: 'user', parts: [{ text: userMessage }] });
+  messages.push({ role: 'user', content: userMessage });
 
-  /* Coba 2 format autentikasi AQ key */
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
-  var body = JSON.stringify({
-    system_instruction: { parts: [{ text: systemText }] },
-    contents: contents,
-    generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-  });
-
-  /* Format 1: x-goog-api-key header */
-  var response = await fetch(url, {
+  var response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-    body: body
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': 'Bearer ' + GROQ_API_KEY
+    },
+    body: JSON.stringify({
+      model:       GROQ_MODEL,
+      messages:    messages,
+      max_tokens:  1024,
+      temperature: 0.3
+    })
   });
-
-  /* Format 2: jika 401, coba ?key= query param */
-  if (response.status === 401) {
-    response = await fetch(url + '?key=' + GEMINI_API_KEY, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: body
-    });
-  }
 
   if (!response.ok) {
     var errData = await response.json().catch(function() { return {}; });
     var errMsg  = errData.error ? errData.error.message : 'HTTP ' + response.status;
-    throw new Error('Gemini API error (' + response.status + '): ' + errMsg);
+    throw new Error('Groq API error: ' + errMsg);
   }
 
   var data = await response.json();
-  var text = data.candidates &&
-             data.candidates[0] &&
-             data.candidates[0].content &&
-             data.candidates[0].content.parts &&
-             data.candidates[0].content.parts[0] &&
-             data.candidates[0].content.parts[0].text;
+  var text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   return text || '(Tidak ada respons dari AI)';
 }
 
