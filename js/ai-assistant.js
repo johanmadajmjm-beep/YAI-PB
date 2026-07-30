@@ -170,11 +170,10 @@ function buildDashboardContext() {
 }
 
 /* ══════════════════════════════════════════════════
-   2. CLAUDE API CALL (Anthropic)
-   Langsung dari browser — tidak perlu GAS routing
+   2. GEMINI API CALL — langsung dari browser
 ══════════════════════════════════════════════════ */
-var CLAUDE_API_KEY   = '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';
-var CLAUDE_MODEL     = 'claude-sonnet-4-6';
+var GEMINI_API_KEY = 'AQ.Ab8RN6Kq6YjmeSnCl1Vt50UjLULHqsSimFofMF57afvLL906HQ';
+var GEMINI_MODEL   = 'gemini-2.0-flash';
 
 async function callGemini(userMessage, chatHistory) {
   var context = buildDashboardContext();
@@ -190,40 +189,53 @@ async function callGemini(userMessage, chatHistory) {
     context
   ].join('\n');
 
-  /* Susun messages: history + pertanyaan baru */
-  var messages = [];
+  /* Susun contents: history + pertanyaan baru */
+  var contents = [];
   chatHistory.slice(-10).forEach(function(msg) {
-    messages.push({
-      role:    msg.role === 'user' ? 'user' : 'assistant',
-      content: String(msg.text || '')
+    contents.push({
+      role:  msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: String(msg.text || '') }]
     });
   });
-  messages.push({ role: 'user', content: userMessage });
+  contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
-  var response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type':            'application/json',
-      'x-api-key':               CLAUDE_API_KEY,
-      'anthropic-version':       '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model:      CLAUDE_MODEL,
-      max_tokens: 1024,
-      system:     systemText,
-      messages:   messages
-    })
+  /* Coba 2 format autentikasi AQ key */
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent';
+  var body = JSON.stringify({
+    system_instruction: { parts: [{ text: systemText }] },
+    contents: contents,
+    generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
   });
+
+  /* Format 1: x-goog-api-key header */
+  var response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+    body: body
+  });
+
+  /* Format 2: jika 401, coba ?key= query param */
+  if (response.status === 401) {
+    response = await fetch(url + '?key=' + GEMINI_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body
+    });
+  }
 
   if (!response.ok) {
     var errData = await response.json().catch(function() { return {}; });
     var errMsg  = errData.error ? errData.error.message : 'HTTP ' + response.status;
-    throw new Error('Claude API error: ' + errMsg);
+    throw new Error('Gemini API error (' + response.status + '): ' + errMsg);
   }
 
   var data = await response.json();
-  var text = data.content && data.content[0] && data.content[0].text;
+  var text = data.candidates &&
+             data.candidates[0] &&
+             data.candidates[0].content &&
+             data.candidates[0].content.parts &&
+             data.candidates[0].content.parts[0] &&
+             data.candidates[0].content.parts[0].text;
   return text || '(Tidak ada respons dari AI)';
 }
 
