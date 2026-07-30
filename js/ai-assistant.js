@@ -170,38 +170,61 @@ function buildDashboardContext() {
 }
 
 /* ══════════════════════════════════════════════════
-   2. GEMINI CALL VIA GAS (server-side routing)
-   Pertanyaan dikirim ke GAS → GAS panggil Gemini
-   API key aman di server, tidak terekspos di browser
+   2. CLAUDE API CALL (Anthropic)
+   Langsung dari browser — tidak perlu GAS routing
 ══════════════════════════════════════════════════ */
+var CLAUDE_API_KEY   = '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';
+var CLAUDE_MODEL     = 'claude-sonnet-4-6';
+
 async function callGemini(userMessage, chatHistory) {
   var context = buildDashboardContext();
 
-  /* Kirim ke GAS endpoint yang sama dengan dashboard */
-  var gasUrl = window.GAS_URL;
-  if (!gasUrl) throw new Error('GAS_URL tidak ditemukan — pastikan api.js sudah dimuat');
+  var systemText = [
+    'Kamu adalah AI Assistant untuk Dashboard YAI-PB (Yayasan Ayo Indonesia).',
+    'Tugasmu adalah membantu pengguna memahami data yang tampil di dashboard.',
+    'Jawablah dalam Bahasa Indonesia yang jelas, ringkas, dan mudah dipahami.',
+    'Fokus pada data aktual yang ada di konteks. Jangan mengarang data.',
+    'Jika ditanya tentang angka atau data yang tidak ada di konteks, katakan bahwa data tersebut tidak tersedia.',
+    'Gunakan format poin/bullet bila membantu kejelasan jawaban.',
+    '',
+    context
+  ].join('\n');
 
-  var response = await fetch(gasUrl, {
+  /* Susun messages: history + pertanyaan baru */
+  var messages = [];
+  chatHistory.slice(-10).forEach(function(msg) {
+    messages.push({
+      role:    msg.role === 'user' ? 'user' : 'assistant',
+      content: String(msg.text || '')
+    });
+  });
+  messages.push({ role: 'user', content: userMessage });
+
+  var response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: {
+      'Content-Type':            'application/json',
+      'x-api-key':               CLAUDE_API_KEY,
+      'anthropic-version':       '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body: JSON.stringify({
-      action:   'askAI',
-      question: userMessage,
-      context:  context,
-      history:  chatHistory.slice(-10) /* max 10 pesan terakhir */
+      model:      CLAUDE_MODEL,
+      max_tokens: 1024,
+      system:     systemText,
+      messages:   messages
     })
   });
 
   if (!response.ok) {
-    throw new Error('Gagal menghubungi GAS (HTTP ' + response.status + ')');
+    var errData = await response.json().catch(function() { return {}; });
+    var errMsg  = errData.error ? errData.error.message : 'HTTP ' + response.status;
+    throw new Error('Claude API error: ' + errMsg);
   }
 
   var data = await response.json();
-
-  if (data.error) throw new Error(data.error);
-
-  return data.answer || '(Tidak ada respons dari AI)';
+  var text = data.content && data.content[0] && data.content[0].text;
+  return text || '(Tidak ada respons dari AI)';
 }
 
 /* ══════════════════════════════════════════════════
