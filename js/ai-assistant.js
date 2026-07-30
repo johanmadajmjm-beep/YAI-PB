@@ -17,153 +17,204 @@
    Membuat ringkasan data dashboard untuk dikirim ke AI
 ══════════════════════════════════════════════════ */
 function buildDashboardContext() {
-  if (!window.rawBenef || !window.rawPjum) {
-    return 'Data dashboard belum tersedia.';
-  }
+  if (!window.rawBenef || !window.rawPjum) return 'Data dashboard belum tersedia.';
 
   var B = window.B, P = window.P;
   var benef = window.rawBenef;
   var pjum  = window.rawPjum;
-
-  /* — KPI Utama — */
-  var uniqBenef = countUniqBenef(benef);
-  var totalRows = benef.length;
-  var totalCost = pjum.reduce(function(s, r) { return s + (parseFloat(r[P.jumlah]) || 0); }, 0);
-  var fileSetP = {}, fileSetB = {};
-  pjum.forEach(function(r)  { if (r[P.file]) fileSetP[r[P.file]] = 1; });
-  benef.forEach(function(r) { if (r[B.file]) fileSetB[r[B.file]] = 1; });
-
-  /* — Wilayah — */
-  var desaSet = {}, kecSet = {}, kabSet = {};
-  benef.forEach(function(r) {
-    if (r[B.desa]) desaSet[r[B.desa]] = 1;
-    if (r[B.kec])  kecSet[r[B.kec]]   = 1;
-    if (r[B.kab])  kabSet[r[B.kab]]   = 1;
-  });
-
-  /* — Gender — */
-  var gL = countUniqByGender(benef, 'L');
-  var gP = countUniqByGender(benef, 'P');
-
-  /* — Top 10 Program per Benef Unik — */
-  var progMap = {};
-  benef.forEach(function(r) {
-    var prog = (r[B.proyek] || '').trim();
-    if (!prog) return;
-    var k = prog.toLowerCase();
-    if (!progMap[k]) progMap[k] = { name: prog, set: {}, rec: 0 };
-    progMap[k].set[benefKey(r)] = 1;
-    progMap[k].rec++;
-  });
-  var progCost = {};
-  pjum.forEach(function(r) {
-    var prog = (r[P.proyek] || '').trim().toLowerCase();
-    if (!prog) return;
-    progCost[prog] = (progCost[prog] || 0) + (parseFloat(r[P.jumlah]) || 0);
-  });
-  var progList = Object.values(progMap).map(function(x) {
-    return { name: x.name, uniq: Object.keys(x.set).length, rec: x.rec, cost: progCost[x.name.toLowerCase()] || 0 };
-  }).sort(function(a, b) { return b.uniq - a.uniq; }).slice(0, 10);
-
-  /* — Top 10 Staf — */
-  var stafMap = {};
-  benef.forEach(function(r) {
-    var s = (r[B.staf] || '').trim();
-    if (!s) return;
-    var k = s.toLowerCase();
-    if (!stafMap[k]) stafMap[k] = { name: s, set: {} };
-    stafMap[k].set[benefKey(r)] = 1;
-  });
-  var stafCostMap = {};
-  pjum.forEach(function(r) {
-    var s = (r[P.staf] || '').trim().toLowerCase();
-    if (!s) return;
-    stafCostMap[s] = (stafCostMap[s] || 0) + (parseFloat(r[P.jumlah]) || 0);
-  });
-  var stafList = Object.values(stafMap).map(function(x) {
-    return { name: x.name, uniq: Object.keys(x.set).length, cost: stafCostMap[x.name.toLowerCase()] || 0 };
-  }).sort(function(a, b) { return b.uniq - a.uniq; }).slice(0, 10);
-
-  /* — Top 10 Desa — */
-  var desaGroup = topN(groupCountUniq(benef, function(r) { return r[B.desa]; }), 10);
-
-  /* — Top 10 Kegiatan — */
-  var kegGroup = topN(groupCountUniq(benef, function(r) { return r[B.kegiatan]; }), 10);
-
-  /* — Top 8 Kategori Benef — */
-  var katGroup = topN(groupCountUniq(benef, function(r) { return r[B.kategori]; }), 8);
-
-  /* — Biaya per komponen (top 8) — */
-  var kompGroup = topN(groupSum(
-    pjum,
-    function(r) { return classifyItem ? classifyItem(r[P.item]) : (r[P.item] || '—'); },
-    function(r) { return r[P.jumlah]; }
-  ), 8);
-
-  /* — Trend Tahunan — */
-  var tahunMap = {};
-  benef.forEach(function(r) {
-    var t = validTgl(r[B.tgl]);
-    if (!t) return;
-    var yr = t.slice(0, 4);
-    if (!tahunMap[yr]) tahunMap[yr] = { set: {} };
-    tahunMap[yr].set[benefKey(r)] = 1;
-  });
-  var tahunTrend = Object.keys(tahunMap).sort().map(function(yr) {
-    return yr + ': ' + Object.keys(tahunMap[yr].set).length + ' benef unik';
-  });
-
-  /* — Format Rupiah singkat — */
   function rp(n) { return 'Rp ' + fmtShort(n); }
+  function grp(arr, keyFn) {
+    var m = {};
+    arr.forEach(function(r) { var k = keyFn(r); if (k) m[k] = (m[k]||0)+1; });
+    return m;
+  }
+  function grpSum(arr, keyFn, valFn) {
+    var m = {};
+    arr.forEach(function(r) { var k = keyFn(r); if (k) m[k] = (m[k]||0)+(parseFloat(valFn(r))||0); });
+    return m;
+  }
+  function sortDesc(obj) {
+    return Object.entries(obj).sort(function(a,b){return b[1]-a[1];});
+  }
+  function fmtObj(obj, valFmt, limit) {
+    return sortDesc(obj).slice(0, limit||999).map(function(x,i){
+      return (i+1)+'. '+x[0]+': '+(valFmt ? valFmt(x[1]) : x[1]);
+    }).join('\n');
+  }
 
-  /* — Susun context string — */
+  /* ── KPI ── */
+  var uniqBenef = countUniqBenef(benef);
+  var totalCost = pjum.reduce(function(s,r){return s+(parseFloat(r[P.jumlah])||0);},0);
+  var fileSetP={}, fileSetB={};
+  pjum.forEach(function(r){if(r[P.file])fileSetP[r[P.file]]=1;});
+  benef.forEach(function(r){if(r[B.file])fileSetB[r[B.file]]=1;});
+  var gL=countUniqByGender(benef,'L'), gP=countUniqByGender(benef,'P');
+
+  /* ── Wilayah ── */
+  var desaSet={},kecSet={},kabSet={};
+  benef.forEach(function(r){
+    if(r[B.desa])desaSet[r[B.desa]]=1;
+    if(r[B.kec])kecSet[r[B.kec]]=1;
+    if(r[B.kab])kabSet[r[B.kab]]=1;
+  });
+
+  /* ── Semua Program ── */
+  var progBenef={}, progCost={}, progTrx={};
+  benef.forEach(function(r){var p=(r[B.proyek]||'').trim();if(p)progBenef[p]=(progBenef[p]||0)+1;});
+  pjum.forEach(function(r){
+    var p=(r[P.proyek]||'').trim();
+    if(p){progCost[p]=(progCost[p]||0)+(parseFloat(r[P.jumlah])||0);progTrx[p]=(progTrx[p]||0)+1;}
+  });
+  var allProg = Object.keys(Object.assign({},progBenef,progCost)).sort();
+
+  /* ── Semua Staf ── */
+  var stafBenef={}, stafCost={}, stafTrx={}, stafFile={};
+  benef.forEach(function(r){var s=(r[B.staf]||'').trim();if(s)stafBenef[s]=(stafBenef[s]||0)+1;});
+  pjum.forEach(function(r){
+    var s=(r[P.staf]||'').trim();
+    if(s){stafCost[s]=(stafCost[s]||0)+(parseFloat(r[P.jumlah])||0);stafTrx[s]=(stafTrx[s]||0)+1;}
+  });
+  pjum.forEach(function(r){var s=(r[P.staf]||'').trim();var f=(r[P.file]||'').trim();if(s&&f){if(!stafFile[s])stafFile[s]={};stafFile[s][f]=1;}});
+
+  /* ── Semua Desa ── */
+  var desaBenef = grp(benef, function(r){return (r[B.desa]||'').trim();});
+  var kecBenef  = grp(benef, function(r){return (r[B.kec]||'').trim();});
+  var kabBenef  = grp(benef, function(r){return (r[B.kab]||'').trim();});
+
+  /* ── Kegiatan ── */
+  var kegBenef = grp(benef, function(r){return (r[B.kegiatan]||'').trim();});
+  var kegCost  = grpSum(pjum, function(r){return (r[P.kegiatan]||'').trim();}, function(r){return r[P.jumlah];});
+
+  /* ── Kategori & Disabilitas ── */
+  var katBenef  = grp(benef, function(r){return (r[B.kategori]||'').trim();});
+  var usiaBenef = grp(benef, function(r){return (r[B.katUsia]||'').trim();});
+  var disabBenef= grp(benef, function(r){return (r[B.disab]||'').trim();});
+
+  /* ── Komponen Biaya ── */
+  var kompBiaya = grpSum(pjum,
+    function(r){return classifyItem ? classifyItem(r[P.item]) : (r[P.item]||'Lainnya');},
+    function(r){return r[P.jumlah];}
+  );
+
+  /* ── Trend Bulanan ── */
+  var bulanBenef={}, bulanCost={};
+  benef.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)bulanBenef[t]=(bulanBenef[t]||0)+1;});
+  pjum.forEach(function(r){var t=validTgl(r[P.tgl]);if(t)bulanCost[t]=(bulanCost[t]||0)+(parseFloat(r[P.jumlah])||0);});
+
+  /* ── Semua Bulan ── */
+  var semuaBulan={};
+  Object.keys(bulanBenef).forEach(function(b){semuaBulan[b]=1;});
+  Object.keys(bulanCost).forEach(function(b){semuaBulan[b]=1;});
+  var bulanList = Object.keys(semuaBulan).sort();
+
+  /* ── Per Bulan per Staf ── */
+  var bsStafPjum={}, bsStafBenef={};
+  pjum.forEach(function(r){
+    var t=validTgl(r[P.tgl]);if(!t)return;
+    var s=(r[P.staf]||'').trim();if(!s)return;
+    if(!bsStafPjum[t])bsStafPjum[t]={};
+    if(!bsStafPjum[t][s])bsStafPjum[t][s]={trx:0,cost:0};
+    bsStafPjum[t][s].trx++;
+    bsStafPjum[t][s].cost+=(parseFloat(r[P.jumlah])||0);
+  });
+  benef.forEach(function(r){
+    var t=validTgl(r[B.tgl]);if(!t)return;
+    var s=(r[B.staf]||'').trim();if(!s)return;
+    if(!bsStafBenef[t])bsStafBenef[t]={};
+    bsStafBenef[t][s]=(bsStafBenef[t][s]||0)+1;
+  });
+
+  /* ── Status kirim per bulan (6 bulan terakhir) ── */
+  var daftarStaf = window.CANONICAL_STAF || Object.keys(stafBenef);
+  var bulan6     = bulanList.slice(-6);
+  var statusKirim = bulan6.map(function(bulan) {
+    var sudahP = Object.keys(bsStafPjum[bulan]||{});
+    var sudahB = Object.keys(bsStafBenef[bulan]||{});
+    var belumP = daftarStaf.filter(function(s){return sudahP.indexOf(s)<0;});
+    var belumB = daftarStaf.filter(function(s){return sudahB.indexOf(s)<0;});
+    var detailP = sudahP.map(function(s){
+      var d=bsStafPjum[bulan][s];
+      return s+'('+d.trx+' trx, '+rp(d.cost)+')';
+    }).join(', ');
+    var detailB = sudahB.map(function(s){
+      return s+'('+bsStafBenef[bulan][s]+' benef)';
+    }).join(', ');
+    return [
+      'Bulan '+bulan+':',
+      '  PJUM sudah ('+sudahP.length+'): '+(detailP||'—'),
+      '  PJUM belum ('+belumP.length+'): '+(belumP.join(', ')||'—'),
+      '  Benef sudah ('+sudahB.length+'): '+(detailB||'—'),
+      '  Benef belum ('+belumB.length+'): '+(belumB.join(', ')||'—'),
+    ].join('\n');
+  });
+
+  /* ── Susun context ── */
   var ctx = [
-    '=== KONTEKS DATA DASHBOARD YAI-PB (Yayasan Ayo Indonesia) ===',
-    '',
-    '== KPI UTAMA ==',
-    '- Penerima Manfaat (Beneficiary) Unik: ' + uniqBenef.toLocaleString('id-ID') + ' orang',
-    '- Total Records Partisipasi: ' + totalRows.toLocaleString('id-ID') + ' baris',
-    '- Total Biaya PJUM: ' + rp(totalCost),
-    '- File PJUM Terupload: ' + Object.keys(fileSetP).length,
-    '- File Beneficiary Terupload: ' + Object.keys(fileSetB).length,
-    '- Rata-rata Biaya per Benef Unik: ' + (uniqBenef > 0 ? rp(totalCost / uniqBenef) : '—'),
-    '',
-    '== CAKUPAN WILAYAH ==',
-    '- Jumlah Kabupaten/Kota: ' + Object.keys(kabSet).length,
-    '- Jumlah Kecamatan: ' + Object.keys(kecSet).length,
-    '- Jumlah Desa/Kelurahan: ' + Object.keys(desaSet).length,
-    '',
-    '== KOMPOSISI GENDER ==',
-    '- Laki-laki: ' + gL + ' orang',
-    '- Perempuan: ' + gP + ' orang',
-    '- Rasio P:L: ' + (gL > 0 ? (gP / gL).toFixed(2) : '—'),
-    '',
-    '== 10 PROGRAM TERBESAR (by Benef Unik) ==',
-    progList.map(function(x, i) {
-      return (i+1) + '. ' + x.name + ' — ' + x.uniq + ' benef unik, ' + x.rec + ' records' + (x.cost > 0 ? ', biaya ' + rp(x.cost) : '');
+    '=== DATA DASHBOARD YAI-PB (Yayasan Ayo Indonesia) ===',
+
+    '\n== KPI UTAMA ==',
+    '- Beneficiary Unik: '+uniqBenef.toLocaleString('id-ID')+' orang',
+    '- Total Records: '+benef.length.toLocaleString('id-ID')+' baris',
+    '- Total Biaya PJUM: '+rp(totalCost),
+    '- Transaksi PJUM: '+pjum.length.toLocaleString('id-ID'),
+    '- File PJUM: '+Object.keys(fileSetP).length,
+    '- File Benef: '+Object.keys(fileSetB).length,
+    '- Rp/Benef Unik: '+(uniqBenef>0?rp(totalCost/uniqBenef):'—'),
+    '- Gender: L='+gL+', P='+gP+', Rasio P:L='+(gL>0?(gP/gL).toFixed(2):'—'),
+
+    '\n== WILAYAH ==',
+    '- Kabupaten: '+Object.keys(kabSet).length,
+    '- Kecamatan: '+Object.keys(kecSet).length,
+    '- Desa/Kelurahan: '+Object.keys(desaSet).length,
+
+    '\n== SEMUA PROGRAM (benef records | biaya PJUM | transaksi) ==',
+    allProg.map(function(p){
+      return '- '+p+': '+(progBenef[p]||0)+' benef records'+(progCost[p]?', '+rp(progCost[p]):'')+(progTrx[p]?', '+progTrx[p]+' trx':'');
     }).join('\n'),
-    '',
-    '== 10 STAF TERLIBAT (by Benef Unik) ==',
-    stafList.map(function(x, i) {
-      return (i+1) + '. ' + x.name + ' — ' + x.uniq + ' benef unik' + (x.cost > 0 ? ', kelola ' + rp(x.cost) : '');
+
+    '\n== SEMUA STAF (benef records | biaya PJUM | file) ==',
+    daftarStaf.map(function(s){
+      var b=stafBenef[s]||0, c=stafCost[s]||0, f=stafFile[s]?Object.keys(stafFile[s]).length:0;
+      return '- '+s+': '+b+' benef records'+(c?', '+rp(c):'')+(f?', '+f+' file':'');
     }).join('\n'),
-    '',
-    '== 10 DESA TERBESAR ==',
-    desaGroup.map(function(x, i) { return (i+1) + '. ' + x[0] + ': ' + x[1] + ' benef unik'; }).join('\n'),
-    '',
-    '== 10 KEGIATAN TERBANYAK ==',
-    kegGroup.map(function(x, i) { return (i+1) + '. ' + x[0] + ': ' + x[1] + ' benef unik'; }).join('\n'),
-    '',
-    '== KATEGORI PENERIMA MANFAAT ==',
-    katGroup.map(function(x, i) { return (i+1) + '. ' + x[0] + ': ' + x[1] + ' orang'; }).join('\n'),
-    '',
-    '== KOMPONEN BIAYA PJUM ==',
-    kompGroup.map(function(x, i) { return (i+1) + '. ' + x[0] + ': ' + rp(x[1]); }).join('\n'),
-    '',
-    '== TREN TAHUNAN (Benef Unik) ==',
-    tahunTrend.join('\n') || 'Data tanggal tidak tersedia',
-    '',
-    '=== AKHIR KONTEKS ==='
+
+    '\n== SEBARAN KABUPATEN ==',
+    fmtObj(kabBenef, null, 20),
+
+    '\n== SEBARAN KECAMATAN (top 30) ==',
+    fmtObj(kecBenef, null, 30),
+
+    '\n== SEBARAN DESA (top 50) ==',
+    fmtObj(desaBenef, null, 50),
+
+    '\n== KEGIATAN BENEF (top 30) ==',
+    fmtObj(kegBenef, null, 30),
+
+    '\n== KEGIATAN PJUM — BIAYA (top 20) ==',
+    fmtObj(kegCost, rp, 20),
+
+    '\n== KATEGORI BENEF ==',
+    fmtObj(katBenef, null, 20),
+
+    '\n== KATEGORI USIA ==',
+    fmtObj(usiaBenef, null, 15),
+
+    '\n== RAGAM DISABILITAS ==',
+    fmtObj(disabBenef, null, 15),
+
+    '\n== KOMPONEN BIAYA PJUM ==',
+    fmtObj(kompBiaya, rp, 15),
+
+    '\n== TREND BULANAN ==',
+    bulanList.map(function(b){
+      return b+': '+(bulanBenef[b]||0)+' benef records'+(bulanCost[b]?', '+rp(bulanCost[b]):'');
+    }).join('\n'),
+
+    '\n== STATUS PENGIRIMAN FILE (6 bulan terakhir) ==',
+    '(Daftar staf: '+daftarStaf.join(', ')+')',
+    statusKirim.join('\n\n'),
+
+    '\n=== AKHIR DATA ==='
   ].join('\n');
 
   return ctx;
