@@ -9,9 +9,8 @@
       dan mengirimkannya ke Gemini sebagai konteks
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── KONFIGURASI — Ganti dengan API key Gemini Anda ── */
-var GEMINI_API_KEY = 'AQ.Ab8RN6Kq6YjmeSnCl1Vt50UjLULHqsSimFofMF57afvLL906HQ';
-var GEMINI_MODEL   = 'gemini-2.0-flash';
+/* ── KONFIGURASI — API key disimpan aman di GAS (tidak diekspos di browser) ── */
+/* Pertanyaan dikirim ke GAS endpoint yang sama dengan dashboard, GAS yang memanggil Gemini */
 
 /* ══════════════════════════════════════════════════
    1. CONTEXT BUILDER
@@ -171,69 +170,38 @@ function buildDashboardContext() {
 }
 
 /* ══════════════════════════════════════════════════
-   2. GEMINI API CALL
+   2. GEMINI CALL VIA GAS (server-side routing)
+   Pertanyaan dikirim ke GAS → GAS panggil Gemini
+   API key aman di server, tidak terekspos di browser
 ══════════════════════════════════════════════════ */
 async function callGemini(userMessage, chatHistory) {
   var context = buildDashboardContext();
-  var systemInstruction = [
-    'Kamu adalah AI Assistant untuk Dashboard YAI-PB (Yayasan Ayo Indonesia).',
-    'Tugasmu adalah membantu pengguna memahami data yang tampil di dashboard.',
-    'Jawablah dalam Bahasa Indonesia yang jelas, ringkas, dan mudah dipahami.',
-    'Fokus pada data aktual yang ada di konteks. Jangan mengarang data.',
-    'Jika ditanya tentang angka atau data yang tidak ada di konteks, katakan bahwa data tersebut tidak tersedia.',
-    'Gunakan format poin/bullet bila membantu kejelasan jawaban.',
-    'Awali setiap sesi dengan memperkenalkan diri sebagai Asisten YAI-PB.',
-    '',
-    context
-  ].join('\n');
 
-  /* Susun history untuk Gemini API format */
-  var contents = [];
+  /* Kirim ke GAS endpoint yang sama dengan dashboard */
+  var gasUrl = window.GAS_URL;
+  if (!gasUrl) throw new Error('GAS_URL tidak ditemukan — pastikan api.js sudah dimuat');
 
-  /* Tambahkan history sebelumnya */
-  chatHistory.forEach(function(msg) {
-    contents.push({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }]
-    });
+  var response = await fetch(gasUrl, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action:   'askAI',
+      question: userMessage,
+      context:  context,
+      history:  chatHistory.slice(-10) /* max 10 pesan terakhir */
+    })
   });
-
-  /* Tambahkan pertanyaan terbaru */
-  contents.push({
-    role: 'user',
-    parts: [{ text: userMessage }]
-  });
-
-  var response = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024
-        }
-      })
-    }
-  );
 
   if (!response.ok) {
-    var errData = await response.json().catch(function() { return {}; });
-    throw new Error(errData.error ? errData.error.message : 'Gagal menghubungi Gemini API (HTTP ' + response.status + ')');
+    throw new Error('Gagal menghubungi GAS (HTTP ' + response.status + ')');
   }
 
   var data = await response.json();
-  var text = data.candidates &&
-             data.candidates[0] &&
-             data.candidates[0].content &&
-             data.candidates[0].content.parts &&
-             data.candidates[0].content.parts[0] &&
-             data.candidates[0].content.parts[0].text;
 
-  return text || '(Tidak ada respons dari AI)';
+  if (data.error) throw new Error(data.error);
+
+  return data.answer || '(Tidak ada respons dari AI)';
 }
 
 /* ══════════════════════════════════════════════════
@@ -487,11 +455,6 @@ function initAIAssistant() {
   /* — Kirim pesan ke Gemini — */
   async function sendMessage(userText) {
     if (!userText.trim() || isLoading) return;
-
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'GANTI_DENGAN_API_KEY_GEMINI_ANDA') {
-      appendBotMsg('⚠️ **API Key belum dikonfigurasi.** Buka file `js/ai-assistant.js` dan isi variabel `GEMINI_API_KEY` dengan API key Gemini Anda.');
-      return;
-    }
 
     if (!window.rawBenef) {
       appendBotMsg('⚠️ Data dashboard belum dimuat. Silakan tunggu data selesai dimuat terlebih dahulu.');
