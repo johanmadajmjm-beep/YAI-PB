@@ -56,7 +56,12 @@ window.mkChart = function(id, type, labels, datasets, extra) {
         delete opts.scales.y.ticks.callback;
       }
       opts.plugins.tooltip.callbacks = {
-        label: function(ctx) { return extra.yFmt(ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed); }
+        label: function(ctx) {
+          var val = extra.indexAxis === 'y'
+            ? ctx.parsed.x
+            : (ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed);
+          return extra.yFmt(val);
+        }
       };
     }
     if (extra.stacked) {

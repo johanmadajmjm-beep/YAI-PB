@@ -514,12 +514,12 @@ function renderLaporanContent() {
   }).join('');
 
   var uniqBenef = countUniqBenef(benef);
-  var progBS={},desaS={},kabS={};
-  benef.forEach(function(r){if(r[B.proyek])progBS[r[B.proyek]]=1;if(r[B.desa])desaS[r[B.desa]]=1;if(r[B.kab])kabS[r[B.kab]]=1;});
+  var progBS={},fileBS={},stafBS={};
+  benef.forEach(function(r){if(r[B.proyek])progBS[r[B.proyek]]=1;if(r[B.file])fileBS[r[B.file]]=1;if(r[B.staf])stafBS[r[B.staf]]=1;});
   var rekapB = [
     ['Total Baris', benef.length.toLocaleString()],['Benef Unik', uniqBenef.toLocaleString()],
-    ['Total Program', Object.keys(progBS).length.toLocaleString()],['Total Desa', Object.keys(desaS).length.toLocaleString()],
-    ['Total Kabupaten', Object.keys(kabS).length.toLocaleString()],
+    ['Total Program', Object.keys(progBS).length.toLocaleString()],['Total File Upload', Object.keys(fileBS).length.toLocaleString()],
+    ['Total Staf', Object.keys(stafBS).length.toLocaleString()],
     ['L / P', countUniqByGender(benef,'L')+' / '+countUniqByGender(benef,'P')],
   ];
   var bRekEl = document.getElementById('laporan-benef-rekap');
