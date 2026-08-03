@@ -55,12 +55,19 @@ window.mkChart = function(id, type, labels, datasets, extra) {
         opts.scales.x.ticks = Object.assign({}, BASE_SCALE_X.ticks, { callback: extra.yFmt });
         delete opts.scales.y.ticks.callback;
       }
+      /* Tooltip hover HARUS tampilkan angka persis, bukan versi ringkas
+         sumbu (mis. "2.960.000" bukan "3,0 jt") — supaya tidak terlihat
+         seperti data salah/dibulatkan sepihak. yFmt tetap dipakai khusus
+         untuk label sumbu; tooltipFmt (default: window.fmt, Rupiah penuh)
+         dipakai untuk tooltip. Set extra.tooltipFmt eksplisit kalau memang
+         butuh tooltip ringkas juga. */
+      var tipFmt = extra.tooltipFmt || window.fmt || extra.yFmt;
       opts.plugins.tooltip.callbacks = {
         label: function(ctx) {
           var val = extra.indexAxis === 'y'
             ? ctx.parsed.x
             : (ctx.parsed.y !== undefined ? ctx.parsed.y : ctx.parsed);
-          return extra.yFmt(val);
+          return tipFmt(val);
         }
       };
     }

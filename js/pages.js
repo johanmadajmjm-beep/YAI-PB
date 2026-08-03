@@ -243,7 +243,7 @@ function renderAnalitikContent(){
       x:{title:{display:true,text:'Benef Unik',color:'#918C81',font:{size:10}},ticks:{color:'#918C81',font:{size:10}},grid:{color:'#F1EEE7'}},
       y:{title:{display:true,text:'Biaya PJUM',color:'#918C81',font:{size:10}},ticks:{color:'#918C81',font:{size:10},callback:fmtShort},grid:{color:'#F1EEE7'}}
     }}});
-  if(kdCh){kdCh.options.plugins.tooltip.callbacks={label:function(ctx){var d=ctx.raw;return d.label+': '+d.x.toLocaleString()+' benef · '+fmtShort(d.y);}};kdCh.update();}
+  if(kdCh){kdCh.options.plugins.tooltip.callbacks={label:function(ctx){var d=ctx.raw;return d.label+': '+d.x.toLocaleString()+' benef · '+fmt(d.y);}};kdCh.update();}
 
   /* ── 2. Efisiensi Program (bar) ── */
   mkBarH('ach-efisiensi', efisi.map(function(e){return e.p;}), efisi.map(function(e){return e.r;}),

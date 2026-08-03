@@ -54,6 +54,8 @@ function buildDashboard() {
   setEl('kpi-desa',  totalDesa.toLocaleString('id-ID'));
   setEl('kpi-kab',   totalKab + ' Kabupaten');
   setEl('kpi-biaya', fmtShort(totalCost));
+  var kpiBiayaEl = document.getElementById('kpi-biaya');
+  if (kpiBiayaEl) kpiBiayaEl.title = fmt(totalCost) + ' (angka pasti)';
   setEl('kpi-uniq',  totalRows.toLocaleString('id-ID') + ' total records');
 
   var tahunF = v('dash-tahun'), bulanF = v('dash-bulan');
