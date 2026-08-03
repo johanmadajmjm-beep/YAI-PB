@@ -435,41 +435,35 @@ function resetDashFilter() {
 
 /* Laporan page — now with filters */
 function buildLaporanPage() {
-  /* Populate filters (once) */
+  /* Attach listeners (once) */
   if (!window._laporanFilterAttached) {
-    var B = window.B, P = window.P;
-    var rawProgs = dedupProgram(
-      window.rawPjum.map(function(r){return r[P.proyek];})
-        .concat(window.rawBenef.map(function(r){return r[B.proyek];}))
-    );
-    populateSel('lf-proyek', rawProgs);
-    populateSel('lf-staf', dedupStaf(
-      window.rawPjum.map(function(r){return r[P.staf];})
-        .concat(window.rawBenef.map(function(r){return r[B.staf];}))
-    ));
-    var tahunSet = {};
-    window.rawPjum.forEach(function(r){var t=validTgl(r[P.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
-    window.rawBenef.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
-    populateSel('lf-tahun', Object.keys(tahunSet).sort().reverse());
-    populateSel('lf-bulan', ['01','02','03','04','05','06','07','08','09','10','11','12'], bulanName);
-
     ['lf-proyek','lf-staf','lf-tahun','lf-bulan'].forEach(function(id) {
       var el = document.getElementById(id);
-      if (el) el.addEventListener('change', renderLaporanContent);
+      if (el) el.addEventListener('change', function() {
+        refreshLaporanFilters(id);
+        renderLaporanContent();
+      });
     });
     var rb = document.getElementById('lf-reset');
     if (rb) rb.addEventListener('click', function() {
       ['lf-proyek','lf-staf','lf-tahun','lf-bulan'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+      refreshLaporanFilters(null);
       renderLaporanContent();
     });
     window._laporanFilterAttached = true;
   }
+  refreshLaporanFilters(null);
   renderLaporanContent();
 }
 
-function getLaporanFiltered() {
+/* ── getLaporanFiltered(skipField): data gabungan pjum+benef, opsional
+   mengabaikan salah satu field filter — dipakai untuk cascading dropdown ── */
+function getLaporanFiltered(skipField) {
   var P = window.P, B = window.B;
-  var proyek = v('lf-proyek'), staf = v('lf-staf'), tahun = v('lf-tahun'), bulan = v('lf-bulan');
+  var proyek = skipField==='proyek' ? '' : v('lf-proyek');
+  var staf   = skipField==='staf'   ? '' : v('lf-staf');
+  var tahun  = skipField==='tahun'  ? '' : v('lf-tahun');
+  var bulan  = skipField==='bulan'  ? '' : v('lf-bulan');
   var proyekKey = proyek ? normKey(proyek) : '';
   var stafKey   = staf   ? normStafKey(staf) : '';
 
@@ -492,6 +486,55 @@ function getLaporanFiltered() {
     return matchDate(r[P.tgl]);
   });
   return { benef: fb, pjum: fp };
+}
+
+/* ── refreshLaporanFilters: update opsi tiap dropdown berdasarkan
+   pilihan filter lain (cascading) — dropdown yang baru diubah (skipId)
+   dilewati agar tidak mereset dirinya sendiri ── */
+function refreshLaporanFilters(skipId) {
+  var P = window.P, B = window.B;
+
+  /* Program */
+  if (skipId !== 'lf-proyek') {
+    var cur = v('lf-proyek');
+    var d = getLaporanFiltered('proyek');
+    populateSel('lf-proyek', dedupProgram(
+      d.pjum.map(function(r){return r[P.proyek];}).concat(d.benef.map(function(r){return r[B.proyek];}))
+    ));
+    document.getElementById('lf-proyek').value = cur;
+  }
+
+  /* Staf */
+  if (skipId !== 'lf-staf') {
+    var curS = v('lf-staf');
+    var dS = getLaporanFiltered('staf');
+    populateSel('lf-staf', dedupStaf(
+      dS.pjum.map(function(r){return r[P.staf];}).concat(dS.benef.map(function(r){return r[B.staf];}))
+    ));
+    document.getElementById('lf-staf').value = curS;
+  }
+
+  /* Tahun */
+  if (skipId !== 'lf-tahun') {
+    var curT = v('lf-tahun');
+    var dT = getLaporanFiltered('tahun');
+    var tahunSet = {};
+    dT.pjum.forEach(function(r){var t=validTgl(r[P.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
+    dT.benef.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)tahunSet[t.slice(0,4)]=1;});
+    populateSel('lf-tahun', Object.keys(tahunSet).sort().reverse());
+    document.getElementById('lf-tahun').value = curT;
+  }
+
+  /* Bulan */
+  if (skipId !== 'lf-bulan') {
+    var curB = v('lf-bulan');
+    var dB = getLaporanFiltered('bulan');
+    var bulanSet = {};
+    dB.pjum.forEach(function(r){var t=validTgl(r[P.tgl]);if(t)bulanSet[t.slice(5,7)]=1;});
+    dB.benef.forEach(function(r){var t=validTgl(r[B.tgl]);if(t)bulanSet[t.slice(5,7)]=1;});
+    populateSel('lf-bulan', Object.keys(bulanSet).sort(), bulanName);
+    document.getElementById('lf-bulan').value = curB;
+  }
 }
 
 function renderLaporanContent() {
