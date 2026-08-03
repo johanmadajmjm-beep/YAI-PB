@@ -546,7 +546,7 @@ function renderLaporanContent() {
   var fileS={},progPS={},stafPS={},kodeS={};
   pjum.forEach(function(r){if(r[P.file])fileS[r[P.file]]=1;if(r[P.proyek])progPS[r[P.proyek]]=1;if(r[P.staf])stafPS[r[P.staf]]=1;if(r[P.kode])kodeS[r[P.kode]]=1;});
   var rekap = [
-    ['Total Biaya', fmtShort(totalCost)],['Total Transaksi', pjum.length.toLocaleString()],
+    ['Total Biaya', fmt(totalCost)],['Total Transaksi', pjum.length.toLocaleString()],
     ['Total File Upload', Object.keys(fileS).length.toLocaleString()],['Total Program', Object.keys(progPS).length.toLocaleString()],
     ['Total Staf', Object.keys(stafPS).length.toLocaleString()],['Total Kode Kegiatan', Object.keys(kodeS).length.toLocaleString()],
   ];
@@ -575,7 +575,7 @@ function renderLaporanContent() {
   var kpiEl = document.getElementById('laporan-kpi-grid');
   if (kpiEl) {
     var kpis = [
-      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',label:'Total Biaya PJUM',val:fmtShort(totalCost),exact:fmt(totalCost),col:'sc-purple'},
+      {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',label:'Total Biaya PJUM',val:fmt(totalCost),col:'sc-purple'},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',label:'Total Transaksi',val:pjum.length.toLocaleString(),col:'sc-orange'},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',label:'Benef Unik',val:uniqBenef.toLocaleString(),col:'sc-green'},
       {icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>',label:'Total Records',val:benef.length.toLocaleString(),col:'sc-blue'},
@@ -608,7 +608,7 @@ function renderLaporanContent() {
   var tbody = document.getElementById('laporan-prog-body');
   if (tbody) tbody.innerHTML = progRows.map(function(o, i) {
     return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showProgDetail(window._lapProgList['+i+'])" title="Klik untuk detail"><strong>'+o.prog+'</strong></span></td>' +
-      '<td class="num">'+(o.cost>0?fmtShort(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(o.cost>0?fmt(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(o.bTotal>0?o.bTotal.toLocaleString():'—')+'</td><td class="num">'+(o.bUniq>0?o.bUniq.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(o.rpp>0?fmtShort(o.rpp):'—')+'</td></tr>';
   }).join('');
@@ -635,7 +635,7 @@ function renderLaporanContent() {
   var stafTbody = document.getElementById('laporan-staf-body');
   if (stafTbody) stafTbody.innerHTML = stafRows.map(function(o, i) {
     return '<tr><td>'+(i+1)+'</td><td><span class="tbl-link" onclick="showStafDetail(window._lapStafList['+i+'])" title="Klik untuk detail"><strong>'+o.staf+'</strong></span></td>' +
-      '<td class="num">'+(o.cost>0?fmtShort(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
+      '<td class="num">'+(o.cost>0?fmt(o.cost):'—')+'</td><td class="num">'+(o.trx>0?o.trx.toLocaleString():'—')+'</td>' +
       '<td class="num">'+(o.bUniq>0?o.bUniq.toLocaleString():'—')+'</td></tr>';
   }).join('');
 }
@@ -747,7 +747,7 @@ window.exportLaporanPDF = function() {
         ['Komposisi Gender', g.P.toLocaleString()+' P ('+g.pctP.toFixed(1)+'%) / '+g.L.toLocaleString()+' L ('+g.pctL.toFixed(1)+'%)'],
         ['Penyandang Disabilitas', disab.adaDisab.toLocaleString()+' orang ('+(disab.total?(disab.adaDisab/disab.total*100).toFixed(1):0)+'%)']
       ]},
-      {callout:'Dengan investasi '+fmtShort(cost)+', program menjangkau '+uniq.toLocaleString()+' orang di '+Object.keys(desaS).length+' desa — setara '+(uniq>0?fmt(cost/uniq):'—')+' per penerima manfaat.'},
+      {callout:'Dengan investasi '+fmt(cost)+', program menjangkau '+uniq.toLocaleString()+' orang di '+Object.keys(desaS).length+' desa — setara '+(uniq>0?fmt(cost/uniq):'—')+' per penerima manfaat.'},
 
       {section:'II. Perkembangan Tahunan'},
       {text: yearly.length ? 'Bagian ini membandingkan capaian dari tahun ke tahun, baik dari sisi penjangkauan maupun realisasi anggaran. '+describeTrend(yearly,'uniq') : 'Data temporal tidak tersedia untuk filter ini.'},
@@ -1011,7 +1011,7 @@ window.showProgDetail = function(prog) {
       ['Kegiatan (Unik)', kegList.length.toLocaleString()],
       ['Benef Unik', uniq.toLocaleString()],
       ['Total Record Benef', bRows.length.toLocaleString()],
-      ['Total Biaya PJUM', cost > 0 ? fmtShort(cost) : '—'],
+      ['Total Biaya PJUM', cost > 0 ? fmt(cost) : '—'],
       ['Transaksi PJUM', pRows.length.toLocaleString()],
       ['Rp / Benef Unik', uniq > 0 && cost > 0 ? fmtShort(cost / uniq) : '—'],
       ['L / P (Unik)', gL + ' / ' + gP],
@@ -1023,13 +1023,13 @@ window.showProgDetail = function(prog) {
         head: [{t:'Staf'}, {t:'Benef Unik', num:1}, {t:'Record', num:1}, {t:'Biaya PJUM', num:1}, {t:'Transaksi', num:1}],
         rows: stafList.map(function(s) {
           return [_dmEsc(s.name), s.uniq > 0 ? s.uniq.toLocaleString() : '—', s.rec > 0 ? s.rec.toLocaleString() : '—',
-                  s.cost > 0 ? fmtShort(s.cost) : '—', s.trx > 0 ? s.trx.toLocaleString() : '—'];
+                  s.cost > 0 ? fmt(s.cost) : '—', s.trx > 0 ? s.trx.toLocaleString() : '—'];
         }) },
       { title: 'Kegiatan',
         head: [{t:'Kegiatan'}, {t:'Benef Unik', num:1}, {t:'Biaya PJUM', num:1}, {t:'Transaksi', num:1}],
         rows: kegList.map(function(g) {
           return [_dmEsc(g.name), g.uniq > 0 ? g.uniq.toLocaleString() : '—',
-                  g.cost > 0 ? fmtShort(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
+                  g.cost > 0 ? fmt(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
         }) }
     ]
   });
@@ -1061,7 +1061,7 @@ window.showStafDetail = function(staf) {
       ['Program Diikuti', progList.length.toLocaleString()],
       ['Benef Unik', uniq.toLocaleString()],
       ['Total Record Benef', bRows.length.toLocaleString()],
-      ['Total Pengeluaran', cost > 0 ? fmtShort(cost) : '—'],
+      ['Total Pengeluaran', cost > 0 ? fmt(cost) : '—'],
       ['Transaksi PJUM', pRows.length.toLocaleString()],
       ['Kegiatan (Unik)', kegList.length.toLocaleString()],
       ['Rp / Benef Unik', uniq > 0 && cost > 0 ? fmtShort(cost / uniq) : '—'],
@@ -1074,13 +1074,13 @@ window.showStafDetail = function(staf) {
         head: [{t:'Program'}, {t:'Benef Unik', num:1}, {t:'Record', num:1}, {t:'Pengeluaran', num:1}, {t:'Transaksi', num:1}],
         rows: progList.map(function(p) {
           return [_dmEsc(p.name), p.uniq > 0 ? p.uniq.toLocaleString() : '—', p.rec > 0 ? p.rec.toLocaleString() : '—',
-                  p.cost > 0 ? fmtShort(p.cost) : '—', p.trx > 0 ? p.trx.toLocaleString() : '—'];
+                  p.cost > 0 ? fmt(p.cost) : '—', p.trx > 0 ? p.trx.toLocaleString() : '—'];
         }) },
       { title: 'Kegiatan yang Dikerjakan',
         head: [{t:'Kegiatan'}, {t:'Benef Unik', num:1}, {t:'Pengeluaran', num:1}, {t:'Transaksi', num:1}],
         rows: kegList.map(function(g) {
           return [_dmEsc(g.name), g.uniq > 0 ? g.uniq.toLocaleString() : '—',
-                  g.cost > 0 ? fmtShort(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
+                  g.cost > 0 ? fmt(g.cost) : '—', g.trx > 0 ? g.trx.toLocaleString() : '—'];
         }) }
     ]
   });
