@@ -8,8 +8,8 @@
    • Avatar lama (topbar-avatar hardcoded "A/Admin") diganti
      kontennya dengan nama & inisial koordinator yang login —
      tidak ada elemen ganda
-   • setDefaultProgramFilter menggunakan polling sampai opsi
-     tersedia (bukan fixed timeout)
+   • setDefaultProgramFilter dikosongkan — dropdown tetap "Semua",
+     koordinator bebas memilih program miliknya
 ═══════════════════════════════════════════════════════════════ */
 
 /* ── Blok app-layout SEBELUM apapun berjalan ──
@@ -217,44 +217,16 @@ function unlockProgramFilters() {
 }
 
 /* ══════════════════════════════════════════════════
-   5. SET DEFAULT FILTER — polling sampai opsi tersedia
-   Lebih robust daripada fixed timeout
+   5. SET DEFAULT FILTER
+   Biarkan nilai tetap "Semua" (kosong) — koordinator
+   bebas memilih salah satu programnya dari dropdown.
+   Tidak set nilai default agar semua opsi milik
+   koordinator tetap tampil dan bisa dipilih.
 ══════════════════════════════════════════════════ */
 function setDefaultProgramFilter(programs) {
-  if (!programs || programs.length === 0) return;
-  var allowed = buildAllowedMap(programs);
-  var maxTry  = 20;   /* maksimal 20 × 200ms = 4 detik */
-  var attempt = 0;
-
-  function trySet() {
-    attempt++;
-    var anySet = false;
-
-    PROYEK_FILTER_IDS.forEach(function(id) {
-      var sel = document.getElementById(id);
-      if (!sel || !sel.getAttribute('data-locked')) return;
-      if (sel.value) return;  /* sudah ada nilai, skip */
-
-      /* Cari opsi pertama yang masuk allowed dan tidak disabled */
-      var firstMatch = Array.from(sel.options).find(function(o) {
-        return o.value && allowed[o.value.trim().toLowerCase()] && !o.disabled;
-      });
-
-      if (firstMatch) {
-        sel.value = firstMatch.value;
-        sel.dispatchEvent(new Event('change', { bubbles: true }));
-        anySet = true;
-      }
-    });
-
-    /* Jika belum semua ter-set dan masih ada attempt → coba lagi */
-    if (!anySet && attempt < maxTry) {
-      setTimeout(trySet, 200);
-    }
-  }
-
-  /* Mulai polling setelah sedikit delay agar populate selesai dulu */
-  setTimeout(trySet, 300);
+  /* Sengaja kosong — dropdown tetap di "Semua".
+     lockProgramFilters + MutationObserver sudah memastikan
+     hanya program milik koordinator yang tampil sebagai opsi. */
 }
 
 /* ══════════════════════════════════════════════════
