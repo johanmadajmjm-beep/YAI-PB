@@ -11,6 +11,18 @@ window.APP = {
   PG_SIZE: 50
 };
 
+/* ── AUTH HELPERS — filter data berdasarkan program koordinator ── */
+function getAuthPrograms() {
+  if (window.AUTH && !window.AUTH.isAdmin()) return window.AUTH.getPrograms();
+  return null;
+}
+function isProgAllowed(proyekVal) {
+  var progs = getAuthPrograms();
+  if (!progs) return true;
+  var key = String(proyekVal || '').trim().toLowerCase();
+  return progs.some(function(p) { return p.trim().toLowerCase() === key; });
+}
+
 function navigate(page) {
   APP.currentPage = page;
   document.querySelectorAll('.nav-item').forEach(function(el) {
@@ -292,6 +304,7 @@ function refreshDashFilters(skipId) {
     var bulan     = (skipField !== 'bulan'  && curBulan)  ? curBulan : '';
 
     function filterRow(tgl, proyek, staf) {
+      if (!isProgAllowed(proyek)) return false;
       if (proyekKey && normKey(proyek||'')   !== proyekKey) return false;
       if (stafKey   && normStafKey(staf||'') !== stafKey)   return false;
       /* Tanggal — semua data masuk, hanya filter jika ada pilihan */
@@ -405,10 +418,11 @@ function getDashFiltered() {
   var stafKey   = staf   ? normStafKey(staf) : '';
 
   var filteredBenef = window.rawBenef.filter(function(r) {
+    if (!isProgAllowed(r[B.proyek])) return false;
     if (proyekKey && normKey(r[B.proyek])   !== proyekKey) return false;
     if (stafKey   && normStafKey(r[B.staf]) !== stafKey)   return false;
     var tglValid = validTgl(r[B.tgl]);
-    if (tahun === '__blank__' && tglValid)  return false;  // hanya yang blank
+    if (tahun === '__blank__' && tglValid)  return false;
     if (tahun && tahun !== '__blank__' && (!tglValid || !tglValid.startsWith(tahun))) return false;
     if (bulan === '__blank__' && tglValid)  return false;
     if (bulan && bulan !== '__blank__' && (!tglValid || tglValid.slice(5,7) !== bulan)) return false;
@@ -416,6 +430,7 @@ function getDashFiltered() {
   });
 
   var filteredPjum = window.rawPjum.filter(function(r) {
+    if (!isProgAllowed(r[P.proyek])) return false;
     if (proyekKey && normKey(r[P.proyek])   !== proyekKey) return false;
     if (stafKey   && normStafKey(r[P.staf]) !== stafKey)   return false;
     var tglValid = validTgl(r[P.tgl]);
@@ -480,11 +495,13 @@ function getLaporanFiltered(skipField) {
   }
 
   var fb = window.rawBenef.filter(function(r) {
+    if (!isProgAllowed(r[B.proyek])) return false;
     if (proyekKey && normKey(r[B.proyek]) !== proyekKey) return false;
     if (stafKey && normStafKey(r[B.staf]) !== stafKey) return false;
     return matchDate(r[B.tgl]);
   });
   var fp = window.rawPjum.filter(function(r) {
+    if (!isProgAllowed(r[P.proyek])) return false;
     if (proyekKey && normKey(r[P.proyek]) !== proyekKey) return false;
     if (stafKey && normStafKey(r[P.staf]) !== stafKey) return false;
     return matchDate(r[P.tgl]);

@@ -212,27 +212,28 @@ function lockProgramFilters(programs) {
   PROYEK_FILTER_IDS.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
+    /* Hapus "Semua" dan opsi bukan milik koordinator */
     Array.from(sel.options).forEach(function(opt) {
-      /* Hapus "Semua" (value kosong) dan program bukan milik koordinator */
       if (!opt.value || !_allowedPrograms[opt.value.trim().toLowerCase()]) {
         opt.parentNode.removeChild(opt);
       }
     });
-  });
-
-  /* Setelah opsi dibersihkan, set nilai proyek ke program pertama
-     milik koordinator yang tersedia di DOM — TANPA trigger change event.
-     Cascading staf/kec/dll akan mengikuti saat halaman dirender. */
-  PROYEK_FILTER_IDS.forEach(function(id) {
-    var sel = document.getElementById(id);
-    if (!sel) return;
+    /* Langsung set ke opsi pertama yang tersisa */
     var firstOpt = Array.from(sel.options).find(function(o) { return !!o.value; });
     if (firstOpt) sel.value = firstOpt.value;
   });
 
   /* Setelah nilai proyek terset, paksa refresh filter halaman aktif
-     agar staf dan filter lain langsung menyesuaikan program tersebut */
-  triggerActivePageRefresh();
+     agar staf dan filter lain langsung menyesuaikan program tersebut.
+     Delay 100ms memastikan DOM sudah selesai diupdate sebelum refresh. */
+  /* Delay lebih panjang memastikan buildAll() selesai sebelum refresh.
+     Setelah itu populate ulang dash-proyek agar wrap aktif menangkapnya. */
+  setTimeout(function() {
+    /* Rebuild dropdown dash-proyek dengan wrap sudah aktif */
+    if (window.refreshDashFilters) refreshDashFilters(null);
+    /* Refresh halaman aktif */
+    triggerActivePageRefresh();
+  }, 300);
 }
 
 /* Refresh filter halaman yang sedang aktif agar staf/kec/dll

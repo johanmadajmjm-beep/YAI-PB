@@ -34,6 +34,7 @@ function filterPjumRow(r, opts) {
   var proyekKey = opts.proyek ? normKey(opts.proyek) : '';
   var stafKey   = opts.staf   ? normStafKey(opts.staf) : '';
 
+  if (!isProgAllowed(r[P.proyek])) return false;
   if (proyekKey && normKey(r[P.proyek])   !== proyekKey) return false;
   if (stafKey   && normStafKey(r[P.staf]) !== stafKey)   return false;
   if (opts.kode && r[P.kode] !== opts.kode) return false;

@@ -34,6 +34,7 @@ function filterBenefRow(r, opts) {
   var proyekKey = opts.proyek ? normKey(opts.proyek) : '';
   var stafKey   = opts.staf   ? normStafKey(opts.staf) : '';
 
+  if (!isProgAllowed(r[B.proyek])) return false;
   if (proyekKey && normKey(r[B.proyek])   !== proyekKey) return false;
   if (stafKey   && normStafKey(r[B.staf]) !== stafKey)   return false;
   if (opts.kategori && r[B.kategori] !== opts.kategori) return false;
