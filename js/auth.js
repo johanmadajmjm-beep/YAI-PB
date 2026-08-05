@@ -440,7 +440,7 @@ function injectLoginUI() {
     '      </svg>',
     '    </div>',
     '    <h1>YAI-PB Dashboard</h1>',
-    '    <p>Yayasan Ayo Indonesia — Program BEN</p>',
+    '    <p>Yayasan Ayo Indonesia</p>',
     '  </div>',
     '  <div class="field">',
     '    <label for="yai-username">Username</label>',
