@@ -68,10 +68,14 @@ function buildAll() {
   buildLaporanPage();
   populateDashFilters();
   APP.loaded = true;
-  var lo = document.getElementById('loading-overlay');
-  var al = document.getElementById('app-layout');
-  if (lo) lo.style.display = 'none';
-  if (al) al.style.display = 'flex';
+  /* Hanya tampilkan app-layout jika auth sudah selesai (AUTH_READY diset oleh auth.js).
+     Jika auth.js belum load (misal: tidak dipakai), tetap tampilkan seperti biasa. */
+  if (window.AUTH_READY !== false) {
+    var lo = document.getElementById('loading-overlay');
+    var al = document.getElementById('app-layout');
+    if (lo) lo.style.display = 'none';
+    if (al) al.style.display = 'flex';
+  }
 }
 
 /* ═══════════════════════════════════════════════
