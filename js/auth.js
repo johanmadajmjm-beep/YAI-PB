@@ -183,44 +183,29 @@ function lockProgramFilters(programs) {
   window._origPopulateSel = window.populateSel;
   window.populateSel = function(id, values, labelFn) {
     if (_allowedPrograms && PROYEK_FILTER_IDS.indexOf(id) > -1) {
-      /* Filter hanya program milik koordinator */
+      /* Filter hanya program milik koordinator, TAPI biarkan
+         opsi "Semua" tetap ada (nilai kosong = semua program koordinator).
+         Data tetap aman karena isProgAllowed di app.js membatasi ke
+         program koordinator meski "Semua" dipilih. */
       values = values.filter(function(v) {
         return _allowedPrograms[String(v).trim().toLowerCase()];
       });
-      /* Panggil fungsi asli tanpa opsi "Semua" (override innerHTML langsung) */
-      var el = document.getElementById(id);
-      if (el) {
-        var cur = el.value;
-        el.innerHTML = values.map(function(val) {
-          return '<option value="' + val + '">' + (labelFn ? labelFn(val) : val) + '</option>';
-        }).join('');
-        /* Pertahankan nilai aktif jika masih ada, atau set ke pertama */
-        var opts = Array.from(el.options);
-        if (opts.some(function(o) { return o.value === cur; })) {
-          el.value = cur;
-        } else if (opts.length > 0) {
-          el.value = opts[0].value;
-        }
-      }
-      return;
     }
+    /* Panggil fungsi asli — populateSel asli sudah menambahkan "Semua" di depan */
     window._origPopulateSel(id, values, labelFn);
   };
 
   /* Terapkan ke dropdown proyek yang sudah ada di DOM:
-     hapus opsi "Semua" dan opsi yang bukan milik koordinator */
+     hapus HANYA opsi yang bukan milik koordinator, biarkan "Semua" */
   PROYEK_FILTER_IDS.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
-    /* Hapus "Semua" dan opsi bukan milik koordinator */
     Array.from(sel.options).forEach(function(opt) {
-      if (!opt.value || !_allowedPrograms[opt.value.trim().toLowerCase()]) {
+      if (!opt.value) return;  /* biarkan "Semua" (value kosong) */
+      if (!_allowedPrograms[opt.value.trim().toLowerCase()]) {
         opt.parentNode.removeChild(opt);
       }
     });
-    /* Langsung set ke opsi pertama yang tersisa */
-    var firstOpt = Array.from(sel.options).find(function(o) { return !!o.value; });
-    if (firstOpt) sel.value = firstOpt.value;
   });
 
   /* Setelah nilai proyek terset, paksa refresh filter halaman aktif
@@ -259,44 +244,10 @@ function triggerActivePageRefresh() {
   }
 }
 
-/* Wrap tombol Reset di semua halaman agar proyek tidak ikut direset
-   untuk koordinator. Dipanggil setelah APP.loaded = true. */
-function patchResetButtons(programs) {
-  if (!programs) return;  /* admin: tidak perlu dipatch */
-
-  var resets = ['bf-reset', 'pf-reset', 'lf-reset', 'wf-reset'];
-  resets.forEach(function(btnId) {
-    var btn = document.getElementById(btnId);
-    if (!btn || btn._authPatched) return;
-    btn._authPatched = true;
-
-    /* Simpan nilai proyek saat ini sebelum reset, kembalikan setelahnya */
-    var origClick = btn.onclick;
-    btn.addEventListener('click', function() {
-      /* Simpan nilai proyek sebelum reset asli berjalan */
-      var saved = {};
-      PROYEK_FILTER_IDS.forEach(function(id) {
-        var sel = document.getElementById(id);
-        if (sel) saved[id] = sel.value;
-      });
-
-      /* setTimeout memastikan handler reset asli selesai dulu baru kita kembalikan */
-      setTimeout(function() {
-        PROYEK_FILTER_IDS.forEach(function(id) {
-          var sel = document.getElementById(id);
-          if (!sel) return;
-          if (saved[id]) {
-            sel.value = saved[id];
-          } else {
-            var firstOpt = Array.from(sel.options).find(function(o) { return !!o.value; });
-            if (firstOpt) sel.value = firstOpt.value;
-          }
-        });
-        triggerActivePageRefresh();
-      }, 50);
-    });  /* bubble phase — berjalan bersamaan handler asli, setTimeout menunggu selesai */
-  });
-}
+/* Tidak perlu patch tombol Reset lagi.
+   Reset akan mengosongkan proyek ke "Semua", dan itu aman karena
+   isProgAllowed di app.js tetap membatasi data ke program koordinator. */
+function patchResetButtons(programs) { /* tidak diperlukan */ }
 
 function unlockProgramFilters() {
   _allowedPrograms = null;
