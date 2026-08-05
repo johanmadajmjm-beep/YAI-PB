@@ -317,12 +317,25 @@ function updateTopbarAvatar(session) {
 function injectLoginUI() {
   var style = document.createElement('style');
   style.textContent = [
-    '#yai-login-overlay{position:fixed;inset:0;z-index:99999;',
-    'background:linear-gradient(135deg,#1e1b4b 0%,#312e81 40%,#ea580c 100%);',
+    '#yai-login-overlay{position:fixed;inset:0;z-index:99999;overflow:hidden;',
+    'background:#0a1628;',
+    'background-image:radial-gradient(ellipse at 75% 55%,rgba(249,115,22,.28) 0%,transparent 42%),',
+    'radial-gradient(ellipse at 15% 25%,rgba(37,99,235,.18) 0%,transparent 45%),',
+    'linear-gradient(135deg,#0a1628 0%,#0f2137 55%,#13293f 100%);',
     'display:flex;align-items:center;justify-content:center;font-family:inherit;}',
+    /* Network SVG layer */
+    '#yai-login-net{position:absolute;inset:0;width:100%;height:100%;',
+    'opacity:.55;pointer-events:none;z-index:0;}',
+    /* Label pojok kiri atas seperti gambar referensi */
+    '#yai-login-tag{position:absolute;top:18px;left:22px;z-index:2;',
+    'font-size:11px;font-weight:600;letter-spacing:2px;color:rgba(148,163,184,.7);',
+    'display:flex;align-items:center;gap:7px;}',
+    '#yai-login-tag .dot{width:6px;height:6px;border-radius:50%;',
+    'background:#F97316;box-shadow:0 0 8px #F97316;}',
 
     '#yai-login-card{background:#fff;border-radius:20px;padding:40px 36px;',
-    'width:100%;max-width:380px;box-shadow:0 24px 80px rgba(0,0,0,.35);}',
+    'width:100%;max-width:380px;box-shadow:0 24px 80px rgba(0,0,0,.45);',
+    'position:relative;z-index:1;}',
 
     '#yai-login-logo{text-align:center;margin-bottom:28px;}',
     '#yai-login-logo .logo-circle{width:64px;height:64px;border-radius:50%;',
@@ -350,13 +363,74 @@ function injectLoginUI() {
 
     '#yai-login-err{background:#fef2f2;border:1px solid #fecaca;',
     'color:#dc2626;border-radius:8px;padding:10px 13px;font-size:13px;',
-    'margin-top:14px;display:none;}'
+    'margin-top:14px;display:none;}',
+    /* Password wrapper + toggle */
+    '.pwd-wrap{position:relative;display:flex;align-items:center;}',
+    '.pwd-wrap input{padding-right:44px !important;}',
+    '#yai-pwd-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);',
+    'background:none;border:none;cursor:pointer;padding:6px;',
+    'display:flex;align-items:center;justify-content:center;border-radius:6px;}',
+    '#yai-pwd-toggle:hover{background:#f3f4f6;}',
+    '#yai-pwd-toggle svg{width:18px;height:18px;stroke:#9ca3af;fill:none;}',
+    '#yai-pwd-toggle:hover svg{stroke:#F97316;}',
+    /* Kontak WA admin */
+    '#yai-login-contact{margin-top:20px;padding-top:16px;',
+    'border-top:1px solid #f0f0f0;text-align:center;',
+    'font-size:12px;color:#9ca3af;line-height:1.7;}',
+    '#yai-login-contact a{display:inline-flex;align-items:center;gap:5px;',
+    'color:#16a34a;font-weight:600;text-decoration:none;margin-top:3px;',
+    'transition:color .15s;}',
+    '#yai-login-contact a:hover{color:#15803d;}',
+    '#yai-login-contact a svg{width:15px;height:15px;}',
   ].join('');
   document.head.appendChild(style);
 
   var overlay = document.createElement('div');
   overlay.id  = 'yai-login-overlay';
   overlay.innerHTML = [
+    '<div id="yai-login-tag"><span class="dot"></span>YAI · DATA NETWORK</div>',
+    '<svg id="yai-login-net" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">',
+    '  <defs>',
+    '    <radialGradient id="netGlow" cx="50%" cy="50%" r="50%">',
+    '      <stop offset="0%" stop-color="#F97316" stop-opacity="0.9"/>',
+    '      <stop offset="100%" stop-color="#F97316" stop-opacity="0"/>',
+    '    </radialGradient>',
+    '  </defs>',
+    '  <g stroke="#3b82f6" stroke-width="0.6" stroke-opacity="0.35">',
+    '    <line x1="120" y1="140" x2="300" y2="220"/>',
+    '    <line x1="300" y1="220" x2="240" y2="420"/>',
+    '    <line x1="300" y1="220" x2="520" y2="180"/>',
+    '    <line x1="520" y1="180" x2="700" y2="300"/>',
+    '    <line x1="700" y1="300" x2="900" y2="220"/>',
+    '    <line x1="900" y1="220" x2="1050" y2="380"/>',
+    '    <line x1="700" y1="300" x2="620" y2="520"/>',
+    '    <line x1="620" y1="520" x2="440" y2="600"/>',
+    '    <line x1="440" y1="600" x2="240" y2="420"/>',
+    '    <line x1="620" y1="520" x2="820" y2="580"/>',
+    '    <line x1="820" y1="580" x2="1000" y2="640"/>',
+    '    <line x1="900" y1="220" x2="1080" y2="140"/>',
+    '    <line x1="240" y1="420" x2="120" y2="600"/>',
+    '    <line x1="520" y1="180" x2="480" y2="60"/>',
+    '  </g>',
+    '  <g fill="#60a5fa">',
+    '    <circle cx="120" cy="140" r="2.5"/>',
+    '    <circle cx="300" cy="220" r="3"/>',
+    '    <circle cx="520" cy="180" r="2.5"/>',
+    '    <circle cx="700" cy="300" r="3.5" fill="#F97316"/>',
+    '    <circle cx="900" cy="220" r="2.5"/>',
+    '    <circle cx="1050" cy="380" r="2.5"/>',
+    '    <circle cx="240" cy="420" r="3"/>',
+    '    <circle cx="620" cy="520" r="3.5" fill="#F97316"/>',
+    '    <circle cx="440" cy="600" r="2.5"/>',
+    '    <circle cx="820" cy="580" r="3"/>',
+    '    <circle cx="1000" cy="640" r="2.5"/>',
+    '    <circle cx="1080" cy="140" r="2.5"/>',
+    '    <circle cx="120" cy="600" r="2"/>',
+    '    <circle cx="480" cy="60" r="2"/>',
+    '  </g>',
+    '  <circle cx="700" cy="300" r="90" fill="url(#netGlow)" opacity="0.5"/>',
+    '  <circle cx="620" cy="520" r="70" fill="url(#netGlow)" opacity="0.4"/>',
+    '</svg>',
     '<div id="yai-login-card">',
     '  <div id="yai-login-logo">',
     '    <div class="logo-circle">',
@@ -370,16 +444,33 @@ function injectLoginUI() {
     '  </div>',
     '  <div class="field">',
     '    <label for="yai-username">Username</label>',
-    '    <input type="text" id="yai-username" placeholder="contoh: yos"',
+    '    <input type="text" id="yai-username" placeholder=""',
     '           autocomplete="username" autocapitalize="none" spellcheck="false">',
     '  </div>',
     '  <div class="field">',
     '    <label for="yai-password">Password</label>',
-    '    <input type="password" id="yai-password" placeholder="password"',
-    '           autocomplete="current-password">',
+    '    <div class="pwd-wrap">',
+    '      <input type="password" id="yai-password" placeholder=""',
+    '             autocomplete="current-password">',
+    '      <button type="button" id="yai-pwd-toggle" title="Lihat sandi" tabindex="-1">',
+    '        <svg id="yai-eye-open" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">',
+    '          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+    '        </svg>',
+    '        <svg id="yai-eye-off" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">',
+    '          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+    '        </svg>',
+    '      </button>',
+    '    </div>',
     '  </div>',
     '  <button id="yai-login-btn">Masuk</button>',
     '  <div id="yai-login-err"></div>',
+    '  <div id="yai-login-contact">',
+    '    Butuh bantuan akses? Hubungi admin',
+    '    <a href="https://wa.me/6285333068814" target="_blank" rel="noopener">',
+    '      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35zM12 2C6.48 2 2 6.48 2 12c0 1.76.46 3.42 1.27 4.86L2 22l5.27-1.38A9.93 9.93 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/></svg>',
+    '      0853-3306-8814',
+    '    </a>',
+    '  </div>',
     '</div>'
   ].join('\n');
   document.body.appendChild(overlay);
@@ -517,6 +608,25 @@ function attachLoginEvents() {
   if (usrEl) usrEl.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { document.getElementById('yai-password').focus(); }
   });
+
+  /* Toggle lihat/sembunyikan sandi */
+  var toggle = document.getElementById('yai-pwd-toggle');
+  if (toggle && pwdEl) {
+    toggle.addEventListener('click', function() {
+      var eyeOpen = document.getElementById('yai-eye-open');
+      var eyeOff  = document.getElementById('yai-eye-off');
+      if (pwdEl.type === 'password') {
+        pwdEl.type = 'text';
+        if (eyeOpen) eyeOpen.style.display = 'none';
+        if (eyeOff)  eyeOff.style.display  = '';
+      } else {
+        pwdEl.type = 'password';
+        if (eyeOpen) eyeOpen.style.display = '';
+        if (eyeOff)  eyeOff.style.display  = 'none';
+      }
+      pwdEl.focus();
+    });
+  }
 
   setTimeout(function() { if (usrEl) usrEl.focus(); }, 150);
 }
