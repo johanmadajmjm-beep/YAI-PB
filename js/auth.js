@@ -151,9 +151,24 @@ window.AUTH = {
 
 /* ══════════════════════════════════════════════════
    4. FILTER LOCK
-   Kunci semua dropdown proyek agar koordinator
-   hanya melihat programnya sendiri.
+   Cara kerja:
+   Wrap window.populateSel sehingga setiap kali
+   dropdown proyek diisi ulang oleh cascading filter,
+   opsi yang bukan milik koordinator otomatis
+   dibuang dari daftar. Filter lain (staf, desa, dll)
+   tidak disentuh sama sekali — berjalan normal.
 ══════════════════════════════════════════════════ */
+
+/* Programs yang diizinkan untuk sesi ini (null = admin/semua) */
+var _allowedPrograms = null;
+
+function buildAllowedMap(programs) {
+  var map = {};
+  programs.forEach(function(p) { map[p.trim().toLowerCase()] = true; });
+  return map;
+}
+
+/* ID dropdown proyek di semua halaman */
 var PROYEK_FILTER_IDS = [
   'dash-proyek',
   'bf-proyek',
@@ -162,72 +177,49 @@ var PROYEK_FILTER_IDS = [
   'lf-proyek'
 ];
 
-function buildAllowedMap(programs) {
-  var map = {};
-  programs.forEach(function(p) { map[p.trim().toLowerCase()] = p; });
-  return map;
-}
-
-function filterSelectOptions(sel, allowed) {
-  Array.from(sel.options).forEach(function(opt) {
-    if (!opt.value) return;  /* biarkan opsi "Semua" */
-    var ok = !!allowed[opt.value.trim().toLowerCase()];
-    opt.style.display = ok ? '' : 'none';
-    opt.disabled      = !ok;
-  });
-  /* Jika nilai aktif tidak termasuk allowed → reset */
-  if (sel.value && !allowed[sel.value.trim().toLowerCase()]) {
-    sel.value = '';
-  }
-}
-
 function lockProgramFilters(programs) {
   if (!programs) return;  /* admin: tidak dikunci */
-  var allowed = buildAllowedMap(programs);
+  _allowedPrograms = buildAllowedMap(programs);
 
+  /* Wrap populateSel — setiap kali dipanggil untuk dropdown proyek,
+     filter values-nya dulu sebelum dirender ke DOM */
+  window._origPopulateSel = window.populateSel;
+  window.populateSel = function(id, values, labelFn) {
+    if (_allowedPrograms && PROYEK_FILTER_IDS.indexOf(id) > -1) {
+      /* Hanya loloskan program milik koordinator */
+      values = values.filter(function(v) {
+        return _allowedPrograms[String(v).trim().toLowerCase()];
+      });
+    }
+    window._origPopulateSel(id, values, labelFn);
+  };
+
+  /* Terapkan ke dropdown yang sudah ada di DOM saat ini */
   PROYEK_FILTER_IDS.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
-    sel.setAttribute('data-locked', '1');
-    sel.style.pointerEvents = 'none';
-    sel.style.opacity       = '0.75';
-    sel.title               = 'Filter dikunci sesuai program koordinator';
-    filterSelectOptions(sel, allowed);
-    /* Observer: tetap kunci saat cascading filter mengisi ulang opsi */
-    var obs = new MutationObserver(function() {
-      filterSelectOptions(sel, allowed);
+    /* Hapus opsi yang tidak termasuk program koordinator */
+    Array.from(sel.options).forEach(function(opt) {
+      if (!opt.value) return;  /* biarkan "Semua" */
+      if (!_allowedPrograms[opt.value.trim().toLowerCase()]) {
+        opt.parentNode.removeChild(opt);
+      }
     });
-    obs.observe(sel, { childList: true });
   });
 }
 
 function unlockProgramFilters() {
-  PROYEK_FILTER_IDS.forEach(function(id) {
-    var sel = document.getElementById(id);
-    if (!sel) return;
-    sel.removeAttribute('data-locked');
-    sel.style.pointerEvents = '';
-    sel.style.opacity       = '';
-    sel.title               = '';
-    Array.from(sel.options).forEach(function(o) {
-      o.style.display = '';
-      o.disabled      = false;
-    });
-  });
+  _allowedPrograms = null;
+  /* Kembalikan populateSel asli jika sudah di-wrap */
+  if (window._origPopulateSel) {
+    window.populateSel = window._origPopulateSel;
+  }
 }
 
 /* ══════════════════════════════════════════════════
-   5. SET DEFAULT FILTER
-   Biarkan nilai tetap "Semua" (kosong) — koordinator
-   bebas memilih salah satu programnya dari dropdown.
-   Tidak set nilai default agar semua opsi milik
-   koordinator tetap tampil dan bisa dipilih.
+   5. PLACEHOLDER
 ══════════════════════════════════════════════════ */
-function setDefaultProgramFilter(programs) {
-  /* Sengaja kosong — dropdown tetap di "Semua".
-     lockProgramFilters + MutationObserver sudah memastikan
-     hanya program milik koordinator yang tampil sebagai opsi. */
-}
+function setDefaultProgramFilter(programs) { /* tidak diperlukan */ }
 
 /* ══════════════════════════════════════════════════
    6. UPDATE AVATAR TOPBAR
