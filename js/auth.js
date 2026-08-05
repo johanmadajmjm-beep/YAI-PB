@@ -183,21 +183,38 @@ function lockProgramFilters(programs) {
   window._origPopulateSel = window.populateSel;
   window.populateSel = function(id, values, labelFn) {
     if (_allowedPrograms && PROYEK_FILTER_IDS.indexOf(id) > -1) {
+      /* Filter hanya program milik koordinator */
       values = values.filter(function(v) {
         return _allowedPrograms[String(v).trim().toLowerCase()];
       });
+      /* Panggil fungsi asli tanpa opsi "Semua" (override innerHTML langsung) */
+      var el = document.getElementById(id);
+      if (el) {
+        var cur = el.value;
+        el.innerHTML = values.map(function(val) {
+          return '<option value="' + val + '">' + (labelFn ? labelFn(val) : val) + '</option>';
+        }).join('');
+        /* Pertahankan nilai aktif jika masih ada, atau set ke pertama */
+        var opts = Array.from(el.options);
+        if (opts.some(function(o) { return o.value === cur; })) {
+          el.value = cur;
+        } else if (opts.length > 0) {
+          el.value = opts[0].value;
+        }
+      }
+      return;
     }
     window._origPopulateSel(id, values, labelFn);
   };
 
   /* Terapkan ke dropdown proyek yang sudah ada di DOM:
-     hapus opsi yang bukan milik koordinator */
+     hapus opsi "Semua" dan opsi yang bukan milik koordinator */
   PROYEK_FILTER_IDS.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
     Array.from(sel.options).forEach(function(opt) {
-      if (!opt.value) return;
-      if (!_allowedPrograms[opt.value.trim().toLowerCase()]) {
+      /* Hapus "Semua" (value kosong) dan program bukan milik koordinator */
+      if (!opt.value || !_allowedPrograms[opt.value.trim().toLowerCase()]) {
         opt.parentNode.removeChild(opt);
       }
     });
@@ -255,20 +272,18 @@ function patchResetButtons(programs) {
     /* Simpan nilai proyek saat ini sebelum reset, kembalikan setelahnya */
     var origClick = btn.onclick;
     btn.addEventListener('click', function() {
-      /* Simpan nilai proyek semua dropdown yang terkunci */
+      /* Simpan nilai proyek sebelum reset asli berjalan */
       var saved = {};
       PROYEK_FILTER_IDS.forEach(function(id) {
         var sel = document.getElementById(id);
         if (sel) saved[id] = sel.value;
       });
 
-      /* Biarkan handler reset asli berjalan (sudah diattach via addEventListener) */
+      /* setTimeout memastikan handler reset asli selesai dulu baru kita kembalikan */
       setTimeout(function() {
-        /* Kembalikan nilai proyek ke program pertama koordinator */
         PROYEK_FILTER_IDS.forEach(function(id) {
           var sel = document.getElementById(id);
           if (!sel) return;
-          /* Gunakan nilai tersimpan, atau program pertama yang tersedia */
           if (saved[id]) {
             sel.value = saved[id];
           } else {
@@ -276,10 +291,9 @@ function patchResetButtons(programs) {
             if (firstOpt) sel.value = firstOpt.value;
           }
         });
-        /* Refresh ulang filter halaman aktif agar staf mengikuti proyek */
         triggerActivePageRefresh();
-      }, 0);
-    }, true);  /* capture phase: berjalan setelah handler reset asli */
+      }, 50);
+    });  /* bubble phase — berjalan bersamaan handler asli, setTimeout menunggu selesai */
   });
 }
 
