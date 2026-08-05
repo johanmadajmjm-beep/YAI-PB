@@ -29,7 +29,6 @@ var COORD_DATA = {
       'Ayo - KEHATI',
       'Ayo - PolishAid',
       'Ayo - Transfair',
-      'Ayo - TF',
       'Ayo - VA',
       'Ayo - VA (Sorgum)'
     ]
@@ -54,9 +53,8 @@ var COORD_DATA = {
       'Ayo - JPM',
       'Ayo - NLR (KUBIK)',
       'Ayo - Sch/SVD',
-      'Ayo - Sch (Stunting)',
-      'Ayo - SVD (Keswa)',
-      'Ayo - SVD (Keswa Matim)'
+      'Ayo - Sch/SVD (Keswa Rahut)',
+      'Ayo - SVD (Keswa)'
     ]
   },
   flory: {
@@ -74,8 +72,7 @@ var COORD_DATA = {
       'Ayo - Schmitz (Stunting)',
       'Ayo - SVD (Keswa Matim)',
       'Ayo - VCA',
-      'Ayo - Keswa Matim',
-      'Ayo - Lembaga'
+      'Ayo - Keswa Matim'
     ]
   },
   rich: {
@@ -83,7 +80,6 @@ var COORD_DATA = {
     initial: 'R',
     programs: [
       'Ayo - PSE',
-      'Ayo - PSE KR',
       'Ayo - SVD/SDW',
       'Ayo - SDW',
       'Ayo - VICRA'
@@ -92,7 +88,7 @@ var COORD_DATA = {
   admin: {
     display: 'Admin',
     initial: 'A',
-    programs: null   /* null = akses semua */
+    programs: null
   }
 };
 
@@ -182,11 +178,11 @@ function lockProgramFilters(programs) {
   _allowedPrograms = buildAllowedMap(programs);
 
   /* Wrap populateSel — setiap kali dipanggil untuk dropdown proyek,
-     filter values-nya dulu sebelum dirender ke DOM */
+     filter values-nya dulu sebelum dirender ke DOM.
+     Filter lain (staf, kec, dll) tidak disentuh. */
   window._origPopulateSel = window.populateSel;
   window.populateSel = function(id, values, labelFn) {
     if (_allowedPrograms && PROYEK_FILTER_IDS.indexOf(id) > -1) {
-      /* Hanya loloskan program milik koordinator */
       values = values.filter(function(v) {
         return _allowedPrograms[String(v).trim().toLowerCase()];
       });
@@ -194,17 +190,96 @@ function lockProgramFilters(programs) {
     window._origPopulateSel(id, values, labelFn);
   };
 
-  /* Terapkan ke dropdown yang sudah ada di DOM saat ini */
+  /* Terapkan ke dropdown proyek yang sudah ada di DOM:
+     hapus opsi yang bukan milik koordinator */
   PROYEK_FILTER_IDS.forEach(function(id) {
     var sel = document.getElementById(id);
     if (!sel) return;
-    /* Hapus opsi yang tidak termasuk program koordinator */
     Array.from(sel.options).forEach(function(opt) {
-      if (!opt.value) return;  /* biarkan "Semua" */
+      if (!opt.value) return;
       if (!_allowedPrograms[opt.value.trim().toLowerCase()]) {
         opt.parentNode.removeChild(opt);
       }
     });
+  });
+
+  /* Setelah opsi dibersihkan, set nilai proyek ke program pertama
+     milik koordinator yang tersedia di DOM — TANPA trigger change event.
+     Cascading staf/kec/dll akan mengikuti saat halaman dirender. */
+  PROYEK_FILTER_IDS.forEach(function(id) {
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    var firstOpt = Array.from(sel.options).find(function(o) { return !!o.value; });
+    if (firstOpt) sel.value = firstOpt.value;
+  });
+
+  /* Setelah nilai proyek terset, paksa refresh filter halaman aktif
+     agar staf dan filter lain langsung menyesuaikan program tersebut */
+  triggerActivePageRefresh();
+}
+
+/* Refresh filter halaman yang sedang aktif agar staf/kec/dll
+   langsung menyesuaikan program koordinator yang sudah diset */
+function triggerActivePageRefresh() {
+  var page = window.APP ? window.APP.currentPage : 'dashboard';
+  switch (page) {
+    case 'dashboard':
+      if (window.refreshDashFilters) { refreshDashFilters(null); applyDashFilter(); }
+      break;
+    case 'beneficiary':
+      if (window.refreshBenefFilters) { refreshBenefFilters(null); applyBenefFilter(); }
+      break;
+    case 'pjum':
+      if (window.refreshPjumFilters) { refreshPjumFilters(null); applyPjumFilter(); }
+      break;
+    case 'wilayah':
+      if (window.refreshWilayahFilters) { refreshWilayahFilters(null); applyWilayahFilter(); }
+      break;
+    case 'laporan':
+      if (window.refreshLaporanFilters) { refreshLaporanFilters(null); }
+      break;
+  }
+}
+
+/* Wrap tombol Reset di semua halaman agar proyek tidak ikut direset
+   untuk koordinator. Dipanggil setelah APP.loaded = true. */
+function patchResetButtons(programs) {
+  if (!programs) return;  /* admin: tidak perlu dipatch */
+
+  var resets = ['bf-reset', 'pf-reset', 'lf-reset', 'wf-reset'];
+  resets.forEach(function(btnId) {
+    var btn = document.getElementById(btnId);
+    if (!btn || btn._authPatched) return;
+    btn._authPatched = true;
+
+    /* Simpan nilai proyek saat ini sebelum reset, kembalikan setelahnya */
+    var origClick = btn.onclick;
+    btn.addEventListener('click', function() {
+      /* Simpan nilai proyek semua dropdown yang terkunci */
+      var saved = {};
+      PROYEK_FILTER_IDS.forEach(function(id) {
+        var sel = document.getElementById(id);
+        if (sel) saved[id] = sel.value;
+      });
+
+      /* Biarkan handler reset asli berjalan (sudah diattach via addEventListener) */
+      setTimeout(function() {
+        /* Kembalikan nilai proyek ke program pertama koordinator */
+        PROYEK_FILTER_IDS.forEach(function(id) {
+          var sel = document.getElementById(id);
+          if (!sel) return;
+          /* Gunakan nilai tersimpan, atau program pertama yang tersedia */
+          if (saved[id]) {
+            sel.value = saved[id];
+          } else {
+            var firstOpt = Array.from(sel.options).find(function(o) { return !!o.value; });
+            if (firstOpt) sel.value = firstOpt.value;
+          }
+        });
+        /* Refresh ulang filter halaman aktif agar staf mengikuti proyek */
+        triggerActivePageRefresh();
+      }, 0);
+    }, true);  /* capture phase: berjalan setelah handler reset asli */
   });
 }
 
@@ -422,7 +497,7 @@ function applyAuthAfterLoad() {
       /* Kunci filter jika bukan admin */
       if (!session.isAdmin && session.programs) {
         lockProgramFilters(session.programs);
-        setDefaultProgramFilter(session.programs);
+        patchResetButtons(session.programs);
       }
 
     } else {
